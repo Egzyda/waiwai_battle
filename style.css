@@ -111,9 +111,25 @@ body {
     font-size: clamp(34px, 11cqw, 60px);
     font-weight: 900;
     text-align: center;
-    margin-top: 20%;
+    margin-top: 18%;
+    letter-spacing: 1px;
     color: #fff;
-    text-shadow: 0 4px 10px rgba(0,0,0,0.8), 0 0 20px var(--primary);
+    text-shadow:
+        0 1px 0 #cdeeff,
+        0 3px 0 rgba(10,40,90,0.9),
+        0 8px 18px rgba(0,0,0,0.85),
+        0 0 24px rgba(79,172,254,0.9),
+        0 0 44px rgba(79,172,254,0.6);
+}
+.title-logo::after {
+    content: '';
+    display: block;
+    width: 140px;
+    max-width: 40%;
+    height: 4px;
+    margin: 16px auto 0;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    box-shadow: 0 0 14px var(--primary);
 }
 
 .btn-primary {
@@ -211,7 +227,7 @@ body {
     font-size: 12px;
     font-weight: 700;
     text-align: center;
-    padding: 5px 2px 4px;
+    padding: 13px 2px 4px;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -280,6 +296,9 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.6);
     animation: bob 1s infinite alternate;
     pointer-events: none;
+    /* column-reverseで下のノードほどDOM順が先になるため、そのままだと
+       上にある次のノードの下に隠れてしまう。常に手前に出す */
+    z-index: 20;
 }
 .map-node-callout::after {
     content: '';
@@ -319,6 +338,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-top: 8px;
 }
 
 /* Battle Screen */
@@ -334,19 +354,31 @@ body {
 .enemy-container {
     text-align: center;
 }
-.enemy-img {
+.enemy-frame {
     width: 200px;
     height: 200px;
     width: clamp(160px, 46cqw, 320px);
     height: clamp(160px, 46cqw, 320px);
+    margin: 0 auto;
+    border: 3px solid #555;
+    border-radius: 16px;
+    background: rgba(0,0,0,0.25);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.enemy-img {
+    width: 88%;
+    height: 88%;
     object-fit: contain;
-    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.5));
 }
 .enemy-name {
     font-size: clamp(16px, 5vw, 22px);
     font-size: clamp(16px, 5cqw, 28px);
     font-weight: 900;
-    margin-top: 8px;
+    margin-top: 16px;
     text-shadow: 1px 2px 4px #000;
     white-space: nowrap;
 }
@@ -423,7 +455,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 16px;
+    padding: 14px 16px 6px;
     word-break: keep-all;
     background: rgba(0,0,0,0.4);
 }
@@ -458,6 +490,7 @@ body {
     font-size: 11px;
     font-weight: 700;
     margin-top: 4px;
+    padding-top: 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -529,6 +562,7 @@ body {
     font-size: clamp(18px, 6vw, 24px);
     font-size: clamp(18px, 6cqw, 30px);
     font-weight: 900;
+    margin-top: 14px;
     margin-bottom: 20px;
     word-break: keep-all;
 }
@@ -560,7 +594,7 @@ body {
     font-size: clamp(22px, 7.2vw, 30px);
     font-size: clamp(22px, 7.2cqw, 38px);
     margin-bottom: 30px;
-    padding: 0 20px;
+    padding: 20px 20px 0;
     color: #fff;
     text-shadow: 0 2px 10px #000;
     word-break: keep-all;
@@ -608,11 +642,29 @@ body {
     text-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 .mg-renda-btn.pop {
-    animation: rendaPop 0.12s ease-out;
+    animation: rendaPop 0.22s cubic-bezier(.34,1.56,.64,1);
 }
 @keyframes rendaPop {
-    from { transform: translate(-50%, -50%) scale(0.88); }
-    to { transform: translate(-50%, -50%) scale(1); }
+    0% { transform: translate(-50%, -50%) scale(0.72); background: #fff8dc; }
+    55% { transform: translate(-50%, -50%) scale(1.18); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
+.mg-renda-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 190px;
+    height: 190px;
+    margin-left: -95px;
+    margin-top: -95px;
+    border-radius: 50%;
+    border: 6px solid #fff5c2;
+    pointer-events: none;
+    animation: rendaRing 0.4s ease-out forwards;
+}
+@keyframes rendaRing {
+    from { transform: scale(0.8); opacity: 0.9; }
+    to { transform: scale(1.5); opacity: 0; }
 }
 .mg-slash-target, .hs-combo {
     position: absolute;
@@ -632,6 +684,10 @@ body {
 .mg-slash-target.slashed, .hs-combo.slashed {
     transform: scale(1.5) rotate(30deg);
     opacity: 0;
+}
+.mg-arrow-glyph {
+    display: block;
+    line-height: 1;
 }
 .mg-hole {
     width: 100%;
@@ -654,8 +710,16 @@ body {
 .mg-mole.up {
     transform: translateY(-6%);
 }
-.mg-mole.bonk {
-    transform: translateY(-6%) scale(0.7);
+.mg-hit-burst {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 44px;
+    pointer-events: none;
+    animation: hitBurst 0.3s ease-out forwards;
+}
+@keyframes hitBurst {
+    from { transform: translate(-50%, -50%) scale(0.6); opacity: 1; }
+    to { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
 }
 
 /* --- ひっさつわざのパーツ --- */
@@ -664,7 +728,7 @@ body {
     font-size: clamp(22px, 6.5cqw, 32px);
     font-weight: 900;
     text-align: center;
-    padding: 0 20px;
+    padding: 20px 20px 0;
     margin-bottom: 16px;
     text-shadow: 0 2px 8px #000;
     word-break: keep-all;
@@ -724,10 +788,24 @@ body {
     animation: flash 0.3s;
 }
 
-ruby rt {
+/* ルビ(rt)を通常の行の流れから外し、絶対配置にする。
+   これにより「ルビがある文字とない文字が混ざると、ルビの分だけ
+   行の高さが変わってベースラインがずれる」問題を解消する
+   （ルビの有無に関わらず、どの行も同じ高さになる） */
+ruby {
+    position: relative;
+}
+rt {
+    position: absolute;
+    top: -0.95em;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 0.55em;
     font-weight: 400;
+    line-height: 1;
     color: rgba(255,255,255,0.7);
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 /* Toast */

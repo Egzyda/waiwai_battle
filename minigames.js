@@ -212,8 +212,8 @@ const Minigames = {
             el.style.top = positions[i].y + 'px';
             el.style.filter = 'drop-shadow(0 0 10px gold) drop-shadow(0 0 4px orange)';
             el.addEventListener('pointerdown', () => {
-                if (el.style.visibility === 'hidden') return;
-                el.style.visibility = 'hidden';
+                if (!el.isConnected) return;
+                el.remove(); // 要素ごと消して、フィルター効果の残像が残らないようにする
                 tapped++;
                 const scoreEl = info.querySelector('#mg-score');
                 if (scoreEl) scoreEl.innerText = tapped + ' / ' + total;
@@ -289,6 +289,8 @@ const Minigames = {
             return hit / checkpoints.length;
         }
 
+        const strokes = []; // 実際になぞった線（見た目用。判定はcheckpointsで行う）
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             // お手本の線
@@ -304,21 +306,26 @@ const Minigames = {
             ctx.strokeStyle = 'rgba(255,255,255,0.45)';
             ctx.stroke();
 
-            // なぞれたところを光らせる
-            ctx.fillStyle = '#4facfe';
+            // 実際になぞった軌跡をそのまま描く
+            ctx.lineWidth = 14;
+            ctx.strokeStyle = '#4facfe';
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
             ctx.shadowColor = '#4facfe';
             ctx.shadowBlur = 8;
-            for (const c of checkpoints) {
-                if (!c.hit) continue;
+            for (const stroke of strokes) {
+                if (stroke.length < 2) continue;
                 ctx.beginPath();
-                ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.moveTo(stroke[0].x, stroke[0].y);
+                for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y);
+                ctx.stroke();
             }
             ctx.shadowBlur = 0;
         }
         draw();
 
         let drawing = false;
+        let currentStroke = null;
         function pos(e) {
             const rect = canvas.getBoundingClientRect();
             return {
@@ -331,12 +338,19 @@ const Minigames = {
                 if (c.hit) continue;
                 if (Math.hypot(c.x - p.x, c.y - p.y) <= tolerance) c.hit = true;
             }
+            currentStroke.push(p);
             draw();
             // ぜんぶなぞれたら自動で終了
             if (coverage() >= 0.995) end();
         }
 
-        canvas.addEventListener('pointerdown', (e) => { drawing = true; canvas.setPointerCapture(e.pointerId); mark(pos(e)); });
+        canvas.addEventListener('pointerdown', (e) => {
+            drawing = true;
+            currentStroke = [];
+            strokes.push(currentStroke);
+            canvas.setPointerCapture(e.pointerId);
+            mark(pos(e));
+        });
         canvas.addEventListener('pointermove', (e) => { if (drawing) mark(pos(e)); });
         canvas.addEventListener('pointerup', () => { drawing = false; });
         canvas.addEventListener('pointercancel', () => { drawing = false; });
@@ -464,6 +478,13 @@ const Minigames = {
             btn.classList.remove('pop');
             void btn.offsetWidth;
             btn.classList.add('pop');
+
+            // 押すたびに広がるリングを出して、押せたことを分かりやすくする
+            const ring = document.createElement('div');
+            ring.className = 'mg-renda-ring';
+            container.appendChild(ring);
+            setTimeout(() => ring.remove(), 400);
+
             if (taps >= goal) end();
         });
 
@@ -514,9 +535,9 @@ const Minigames = {
         for (let i = 0; i < total; i++) {
             const el = document.createElement('div');
             el.className = 'mg-slash-target';
-            el.innerText = '✳';
             el.style.left = positions[i].x + 'px';
             el.style.top = positions[i].y + 'px';
+            el.innerHTML = `<span class="mg-arrow-glyph" style="transform:rotate(${Math.floor(Math.random() * 4) * 45}deg)">➤</span>`;
             playArea.appendChild(el);
             targets.push({ el, done: false });
         }
@@ -538,13 +559,25 @@ const Minigames = {
             }
         }
 
+        // タップだけでクリアできないよう、実際に指を動かした距離が
+        // 一定を超えてから初めて判定を始める
+        const SWIPE_THRESHOLD = 24;
         let swiping = false;
+        let lastX = 0, lastY = 0, swipedDist = 0;
         playArea.addEventListener('pointerdown', (e) => {
             swiping = true;
+            swipedDist = 0;
+            lastX = e.clientX;
+            lastY = e.clientY;
             playArea.setPointerCapture(e.pointerId);
-            checkAt(e.clientX, e.clientY);
         });
-        playArea.addEventListener('pointermove', (e) => { if (swiping) checkAt(e.clientX, e.clientY); });
+        playArea.addEventListener('pointermove', (e) => {
+            if (!swiping) return;
+            swipedDist += Math.hypot(e.clientX - lastX, e.clientY - lastY);
+            lastX = e.clientX;
+            lastY = e.clientY;
+            if (swipedDist >= SWIPE_THRESHOLD) checkAt(e.clientX, e.clientY);
+        });
         playArea.addEventListener('pointerup', () => { swiping = false; });
         playArea.addEventListener('pointercancel', () => { swiping = false; });
 
@@ -608,11 +641,21 @@ const Minigames = {
                 if (!h.up || ended) return;
                 h.up = false;
                 h.mole.classList.remove('up');
-                h.mole.classList.add('bonk');
-                setTimeout(() => h.mole.classList.remove('bonk'), 200);
                 hits++;
                 const s = info.querySelector('#mg-score-mg');
                 if (s) s.innerText = hits + ' / ' + total;
+
+                // もぐら自身のtransformとぶつからないよう、当たり演出は
+                // 別要素で出して確実に消す（残像防止）
+                const holeRect = h.hole.getBoundingClientRect();
+                const areaRect = playArea.getBoundingClientRect();
+                const burst = document.createElement('div');
+                burst.className = 'mg-hit-burst';
+                burst.innerText = '💥';
+                burst.style.left = (holeRect.left - areaRect.left + holeRect.width / 2) + 'px';
+                burst.style.top = (holeRect.top - areaRect.top + holeRect.height / 2) + 'px';
+                playArea.appendChild(burst);
+                setTimeout(() => burst.remove(), 300);
             });
         });
 
@@ -675,7 +718,7 @@ Minigames.list = [
     },
     {
         id: 'mogura',
-        getTitle: () => `でてきたら ${mgWord(MG_TAP)}`,
+        getTitle: () => `🐹 が でてきたら ${mgWord(MG_TAP)}`,
         start: (d, c, cb) => Minigames.startMogura(d, c, cb)
     }
 ];
@@ -726,7 +769,7 @@ const HissatsuGames = {
 
     // 次々に光るまとを叩く
     startRush: function(difficulty, playArea, setTitle, callback) {
-        setTitle('ひかったら すぐ おして');
+        setTitle('よーい…');
         const total = difficulty === 'child' ? 10 : 16;
         const upTime = difficulty === 'child' ? 900 : 330;
         const SIZE = 80;
@@ -767,7 +810,11 @@ const HissatsuGames = {
                 spawn();
             }, upTime);
         }
-        spawn();
+        // いきなり始まらないよう、少し準備時間を置いてからスタートする
+        timeoutId = setTimeout(() => {
+            setTitle('ひかったら すぐ おして');
+            spawn();
+        }, 1000);
 
         function end() {
             if (ended) return;
@@ -792,9 +839,9 @@ const HissatsuGames = {
         for (let i = 0; i < total; i++) {
             const el = document.createElement('div');
             el.className = 'hs-combo';
-            el.innerText = '✳';
             el.style.left = positions[i].x + 'px';
             el.style.top = positions[i].y + 'px';
+            el.innerHTML = `<span class="mg-arrow-glyph" style="transform:rotate(${Math.floor(Math.random() * 4) * 45}deg)">➤</span>`;
             playArea.appendChild(el);
             targets.push({ el, done: false });
         }
@@ -812,9 +859,25 @@ const HissatsuGames = {
             }
         }
 
+        // タップだけでクリアできないよう、実際に指を動かした距離が
+        // 一定を超えてから初めて判定を始める
+        const SWIPE_THRESHOLD = 24;
         let swiping = false;
-        playArea.addEventListener('pointerdown', (e) => { swiping = true; playArea.setPointerCapture(e.pointerId); checkAt(e.clientX, e.clientY); });
-        playArea.addEventListener('pointermove', (e) => { if (swiping) checkAt(e.clientX, e.clientY); });
+        let lastX = 0, lastY = 0, swipedDist = 0;
+        playArea.addEventListener('pointerdown', (e) => {
+            swiping = true;
+            swipedDist = 0;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            playArea.setPointerCapture(e.pointerId);
+        });
+        playArea.addEventListener('pointermove', (e) => {
+            if (!swiping) return;
+            swipedDist += Math.hypot(e.clientX - lastX, e.clientY - lastY);
+            lastX = e.clientX;
+            lastY = e.clientY;
+            if (swipedDist >= SWIPE_THRESHOLD) checkAt(e.clientX, e.clientY);
+        });
         playArea.addEventListener('pointerup', () => { swiping = false; });
 
         const timerId = setTimeout(() => end(), timeLimit);

@@ -35,7 +35,9 @@ function showModal(text, buttons = [{ text: 'OK', onClick: () => closeModal() }]
         btn.innerHTML = b.text;
         btn.onclick = () => {
             if(b.onClick) b.onClick();
-            closeModal();
+            // ページ遷移(リロード)する場合、先にモーダルを閉じると
+            // 一瞬うしろの画面が見えてしまうので閉じない
+            if(!b.keepOpen) closeModal();
         };
         modalBtnContainer.appendChild(btn);
     });
@@ -314,7 +316,9 @@ function renderBattle() {
     const e = GameState.currentEnemy;
     enemyArea.innerHTML = `
         <div class="enemy-container">
-            <img src="img/enemy/${e.id}.png" class="enemy-img" id="battle-enemy-img" onerror="this.src='img/icon.png'">
+            <div class="enemy-frame">
+                <img src="img/enemy/${e.id}.png" class="enemy-img" id="battle-enemy-img" onerror="this.src='img/icon.png'">
+            </div>
             <div class="enemy-name">${rubyName(e)}</div>
             <div class="hp-bar-bg" style="width: 250px; height: 20px; margin: 5px auto;">
                 <div class="hp-bar-fill" id="enemy-hp-fill" style="width:${(e.currentHp/e.maxHp)*100}%"></div>
@@ -380,7 +384,7 @@ async function startAllyTurn() {
         document.getElementById('attack-btn').disabled = true;
         updateHissatsuGauge();
         await sleep(1000);
-        showModal('まけ……', [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload()}]);
+        showModal('まけ……', [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload(), keepOpen: true}]);
         return;
     }
 
@@ -562,8 +566,8 @@ async function winBattle() {
     const isLast = GameState.currentNode === MAP_NODES.length - 1;
     if(isLast) {
         showModal(
-            `🎉<br>さいごの ${rubyName(GameState.currentEnemy)} に かった<br>やったー <ruby>クリア<rt>くりあ</rt></ruby>`,
-            [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload()}]
+            `🎉<br>さいごの ${rubyName(GameState.currentEnemy)} に かった<br><ruby>クリア<rt>くりあ</rt></ruby>！`,
+            [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload(), keepOpen: true}]
         );
     } else {
         // 敵を倒すたびに「しょうり」のモーダルを出す
@@ -616,8 +620,23 @@ function startHissatsu() {
 }
 
 async function executeHissatsuDamage(successRatio) {
+    // ダメージ計算（成功度 0〜1 から倍率を決める）
+    let multiplier = 0;
+    if(successRatio >= 0.999) multiplier = 6;      // ぜんぶ成功
+    else if(successRatio >= 0.7) multiplier = 4;
+    else if(successRatio >= 0.4) multiplier = 2.5;
+    else if(successRatio > 0) multiplier = 1.5;
+
+    // 先にクリアできたかどうかを表示してから、ダメージ演出に入る
+    const resultText = multiplier >= 6 ? 'だいせいこう' :
+        multiplier >= 4 ? 'せいこう' :
+        multiplier >= 2.5 ? 'せいこう' :
+        multiplier > 0 ? 'ぎりぎり せいこう' : 'しっぱい…';
+    document.getElementById('battle-log').innerText = resultText;
+    await sleep(700);
+
     document.getElementById('battle-log').innerText = 'ひっさつわざ！';
-    
+
     // スカイパンチ演出風の全画面フラッシュ
     const flash = document.createElement('div');
     flash.style.position = 'fixed';
@@ -638,13 +657,6 @@ async function executeHissatsuDamage(successRatio) {
     }, 50);
 
     await sleep(500);
-
-    // ダメージ計算（成功度 0〜1 から倍率を決める）
-    let multiplier = 0;
-    if(successRatio >= 0.999) multiplier = 6;      // ぜんぶ成功
-    else if(successRatio >= 0.7) multiplier = 4;
-    else if(successRatio >= 0.4) multiplier = 2.5;
-    else if(successRatio > 0) multiplier = 1.5;
 
     if(multiplier > 0) {
         const totalAtk = GameState.party.reduce((sum, p) => p.currentHp > 0 ? sum + p.attack : sum, 0);
