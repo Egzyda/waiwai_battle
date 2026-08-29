@@ -1,277 +1,379 @@
+// ==========================
+// わいわいバトル - ミニゲーム
+// 新しいミニゲームは Minigames.list に追加するだけでローテーションに入る
+// ==========================
+
+// ひらがな以外にはルビを振る
+function mgWord(w) {
+    return w.reading ? `<ruby>${w.label}<rt>${w.reading}</rt></ruby>` : w.label;
+}
+const MG_TAP = { label: 'タップ', reading: 'たっぷ' };
+
 const Minigames = {
-    // なぞりゲームの形（順番にローテーションする。ランダムにしない）
+    // あつめる系で使う記号（順番にローテーション）
+    _symbols: [
+        { char: '⭐', label: 'ほし' },
+        { char: '🍎', label: 'りんご' },
+        { char: '🍀', label: 'よつば' },
+        { char: '🌸', label: 'はな' },
+        { char: '🍩', label: 'ドーナツ', reading: 'どーなつ' },
+        { char: '⚽', label: 'ボール', reading: 'ぼーる' }
+    ],
+    _symbolIndex: 0,
+
+    // なぞる形（順番にローテーション）
     _nazoriShapes: [
-        // 三角形
-        [{x:0.2,y:0.3},{x:0.8,y:0.3},{x:0.5,y:0.8}],
-        // ひし形
-        [{x:0.5,y:0.15},{x:0.85,y:0.5},{x:0.5,y:0.85},{x:0.15,y:0.5}],
-        // 四角形
-        [{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}],
-        // 星形
-        [
-            {x:0.5,y:0.1},{x:0.61,y:0.38},{x:0.91,y:0.4},{x:0.67,y:0.58},
-            {x:0.76,y:0.88},{x:0.5,y:0.7},{x:0.24,y:0.88},{x:0.33,y:0.58},
-            {x:0.09,y:0.4},{x:0.39,y:0.38}
-        ]
+        { label: 'さんかく', points: [{x:0.5,y:0.15},{x:0.85,y:0.8},{x:0.15,y:0.8}] },
+        { label: 'しかく', points: [{x:0.2,y:0.2},{x:0.8,y:0.2},{x:0.8,y:0.8},{x:0.2,y:0.8}] },
+        { label: 'ひしがた', points: [{x:0.5,y:0.12},{x:0.85,y:0.5},{x:0.5,y:0.88},{x:0.15,y:0.5}] },
+        { label: 'ほし', points: [
+            {x:0.5,y:0.08},{x:0.62,y:0.38},{x:0.94,y:0.38},{x:0.68,y:0.58},
+            {x:0.78,y:0.9},{x:0.5,y:0.7},{x:0.22,y:0.9},{x:0.32,y:0.58},
+            {x:0.06,y:0.38},{x:0.38,y:0.38}
+        ] },
+        { label: 'いえ', points: [{x:0.5,y:0.1},{x:0.85,y:0.42},{x:0.85,y:0.85},{x:0.15,y:0.85},{x:0.15,y:0.42}] }
     ],
     _nazoriIndex: 0,
 
-    // れんだ・タイミングで使う記号（順番にローテーションする）
-    _symbols: ['⭐', '💎', '🍀', '🎈', '🍭', '⚽'],
-    _symbolIndex: 0,
+    // タイミングで使う形（リングそのものの形を変える）
+    _timingShapes: [
+        { label: 'まる', sides: 0 },
+        { label: 'さんかく', sides: 3 },
+        { label: 'しかく', sides: 4, rot: Math.PI / 4 },
+        { label: 'ひしがた', sides: 4 },
+        { label: 'ほし', sides: 5, star: true }
+    ],
+    _timingIndex: 0,
 
-    // 指定した個数ぶん、なるべく重ならない位置を抽選する
-    placeNonOverlapping: function(count, itemSize, areaW, areaH, minGap) {
+    reset: function() {
+        this._symbolIndex = 0;
+        this._nazoriIndex = 0;
+        this._timingIndex = 0;
+    },
+
+    nextSymbol: function() {
+        return this._symbols[this._symbolIndex % this._symbols.length];
+    },
+    nextNazoriShape: function() {
+        return this._nazoriShapes[this._nazoriIndex % this._nazoriShapes.length];
+    },
+    nextTimingShape: function() {
+        return this._timingShapes[this._timingIndex % this._timingShapes.length];
+    },
+
+    // ==========================
+    // 共通ヘルパー
+    // ==========================
+
+    // グリッドに1個ずつ割り当てることで「絶対に重ならない」配置をつくる
+    placeInGrid: function(count, itemSize, areaW, areaH) {
+        const ratio = areaH > 0 ? (areaW / areaH) : 1;
+        let cols = Math.max(1, Math.round(Math.sqrt(count * ratio)));
+        let rows = Math.ceil(count / cols);
+        while (cols * rows < count) rows++;
+
+        const cellW = areaW / cols;
+        const cellH = areaH / rows;
+
+        // セルをシャッフルして、どのセルを使うかをばらけさせる
+        const cells = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) cells.push({ r, c });
+        }
+        for (let i = cells.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cells[i], cells[j]] = [cells[j], cells[i]];
+        }
+
         const positions = [];
         for (let i = 0; i < count; i++) {
-            let pos = null;
-            for (let attempt = 0; attempt < 40; attempt++) {
-                const candidate = {
-                    x: Math.random() * Math.max(0, areaW - itemSize),
-                    y: Math.random() * Math.max(0, areaH - itemSize)
-                };
-                const ok = positions.every(p => {
-                    const dx = p.x - candidate.x, dy = p.y - candidate.y;
-                    return Math.sqrt(dx * dx + dy * dy) >= minGap;
-                });
-                pos = candidate;
-                if (ok) break;
-            }
-            positions.push(pos);
+            const cell = cells[i];
+            const jitterX = Math.max(0, cellW - itemSize);
+            const jitterY = Math.max(0, cellH - itemSize);
+            positions.push({
+                x: cell.c * cellW + Math.random() * jitterX,
+                y: cell.r * cellH + Math.random() * jitterY
+            });
         }
         return positions;
     },
 
-    // === 連打ゲーム ===
-    startRenda: function(difficulty, container, callback) {
-        container.innerHTML = '';
-        const timeLimit = difficulty === 'child' ? 10 : 2.5;
-        const totalStars = 10;
-        let tapped = 0;
-        let timeLeft = timeLimit;
-        const MARGIN = 28; // 画面端すぎる位置に出ないようにする安全マージン
+    // 結果テキストを出して終わる
+    showResult: function(container, ratio, goodText, badText) {
+        const fb = document.createElement('div');
+        fb.style.position = 'absolute';
+        fb.style.top = '50%';
+        fb.style.left = '50%';
+        fb.style.transform = 'translate(-50%, -50%)';
+        fb.style.fontSize = '46px';
+        fb.style.fontWeight = '900';
+        fb.style.whiteSpace = 'nowrap';
+        fb.style.zIndex = '50';
+        fb.style.color = ratio >= 0.7 ? 'var(--success)' : 'var(--danger)';
+        fb.style.textShadow = '0 2px 10px #000';
+        fb.innerText = ratio >= 0.7 ? goodText : badText;
+        container.appendChild(fb);
+    },
 
-        const infoDiv = document.createElement('div');
-        infoDiv.style.position = 'absolute';
-        infoDiv.style.top = '20px';
-        infoDiv.style.width = '100%';
-        infoDiv.style.textAlign = 'center';
-        infoDiv.style.fontSize = '32px';
-        infoDiv.style.fontWeight = 'bold';
-        infoDiv.style.color = 'white';
-        infoDiv.style.textShadow = '0 2px 4px black';
-        infoDiv.innerHTML = `<span id="mg-time">のこり: ${timeLeft}</span> <br> <span id="mg-score">0 / 10</span>`;
-        container.appendChild(infoDiv);
+    // のこり時間などの見出し
+    makeInfo: function(container, html) {
+        const info = document.createElement('div');
+        info.style.position = 'absolute';
+        info.style.top = '16px';
+        info.style.left = '0';
+        info.style.width = '100%';
+        info.style.textAlign = 'center';
+        info.style.fontSize = '28px';
+        info.style.fontWeight = '900';
+        info.style.color = 'white';
+        info.style.textShadow = '0 2px 4px black';
+        info.style.lineHeight = '1.3';
+        info.innerHTML = html;
+        container.appendChild(info);
+        return info;
+    },
+
+    // 秒読みタイマー（0.5秒単位で表示を更新する）
+    startTimer: function(seconds, onTick, onEnd) {
+        let left = seconds;
+        const id = setInterval(() => {
+            left -= 0.1;
+            if (left < 0) left = 0;
+            onTick(left);
+            if (left <= 0) {
+                clearInterval(id);
+                onEnd();
+            }
+        }, 100);
+        return () => clearInterval(id);
+    },
+
+    // 多角形／星形の頂点を返す（sides:0 は円）
+    shapePoints: function(shape, cx, cy, r) {
+        if (!shape.sides) return null;
+        const n = shape.star ? shape.sides * 2 : shape.sides;
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+            const rr = (shape.star && i % 2 === 1) ? r * 0.48 : r;
+            const a = -Math.PI / 2 + (i * 2 * Math.PI / n) + (shape.rot || 0);
+            pts.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr });
+        }
+        return pts;
+    },
+
+    strokeShape: function(ctx, shape, cx, cy, r) {
+        const pts = this.shapePoints(shape, cx, cy, r);
+        ctx.beginPath();
+        if (!pts) {
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        } else {
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+            ctx.closePath();
+        }
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+    },
+
+    // ==========================
+    // 1. あつめる（記号をタップ）
+    // ==========================
+    startCollect: function(difficulty, container, callback) {
+        container.innerHTML = '';
+        const isChild = difficulty === 'child';
+        const timeLimit = isChild ? 10 : 2.5;
+        const total = 10;
+        let tapped = 0;
+
+        const symbol = this._symbols[this._symbolIndex % this._symbols.length];
+        this._symbolIndex++;
+
+        const info = this.makeInfo(container,
+            `<span id="mg-time">のこり: ${timeLimit.toFixed(1)}</span><br><span id="mg-score">0 / ${total}</span>`);
 
         const playArea = document.createElement('div');
         playArea.style.position = 'absolute';
-        // 上下に十分なセーフティエリアを確保（案内テキスト・画面端との衝突防止）
         playArea.style.top = '110px';
         playArea.style.bottom = '60px';
-        playArea.style.left = MARGIN + 'px';
-        playArea.style.right = MARGIN + 'px';
+        playArea.style.left = '28px';
+        playArea.style.right = '28px';
         container.appendChild(playArea);
 
-        // 記号は毎回ローテーション（見た目のバリエーション用）
-        const symbol = Minigames._symbols[Minigames._symbolIndex % Minigames._symbols.length];
-        Minigames._symbolIndex++;
+        const SIZE = 70;
+        const positions = this.placeInGrid(total, SIZE, playArea.clientWidth, playArea.clientHeight);
 
-        // 星（記号）をなるべく重ならない位置に配置
-        const STAR_SIZE = 70;
-        const positions = Minigames.placeNonOverlapping(
-            totalStars, STAR_SIZE, playArea.clientWidth, playArea.clientHeight, STAR_SIZE * 1.1
-        );
-
-        for(let i=0; i<totalStars; i++) {
-            const star = document.createElement('div');
-            star.innerHTML = symbol;
-            star.style.position = 'absolute';
-            star.style.fontSize = '64px';
-            star.style.left = positions[i].x + 'px';
-            star.style.top = positions[i].y + 'px';
-            star.style.transition = 'transform 0.1s';
-            star.style.filter = 'drop-shadow(0 0 10px gold) drop-shadow(0 0 4px orange)';
-
-            star.addEventListener('pointerdown', function() {
-                if(star.style.display !== 'none') {
-                    star.style.display = 'none';
-                    tapped++;
-                    document.getElementById('mg-score').innerText = tapped + ' / ' + totalStars;
-
-                    if(tapped >= totalStars) {
-                        endGame();
-                    }
-                }
+        for (let i = 0; i < total; i++) {
+            const el = document.createElement('div');
+            el.innerHTML = symbol.char;
+            el.style.position = 'absolute';
+            el.style.fontSize = '60px';
+            el.style.lineHeight = '1';
+            el.style.left = positions[i].x + 'px';
+            el.style.top = positions[i].y + 'px';
+            el.style.filter = 'drop-shadow(0 0 10px gold) drop-shadow(0 0 4px orange)';
+            el.addEventListener('pointerdown', () => {
+                if (el.style.visibility === 'hidden') return;
+                el.style.visibility = 'hidden';
+                tapped++;
+                const scoreEl = info.querySelector('#mg-score');
+                if (scoreEl) scoreEl.innerText = tapped + ' / ' + total;
+                if (tapped >= total) end();
             });
-            playArea.appendChild(star);
+            playArea.appendChild(el);
         }
 
-        let timer;
-        function updateTime() {
-            timeLeft--;
-            const timeEl = document.getElementById('mg-time');
-            if(timeEl) timeEl.innerText = 'のこり: ' + timeLeft;
-            if(timeLeft <= 0) {
-                endGame();
-            }
-        }
-        timer = setInterval(updateTime, 1000);
+        const stop = this.startTimer(timeLimit, (left) => {
+            const t = info.querySelector('#mg-time');
+            if (t) t.innerText = 'のこり: ' + left.toFixed(1);
+        }, () => end());
 
         let ended = false;
-        function endGame() {
-            if(ended) return;
+        const self = this;
+        function end() {
+            if (ended) return;
             ended = true;
-            clearInterval(timer);
-            const ratio = tapped / totalStars;
-            setTimeout(() => callback(ratio), 500);
+            stop();
+            const ratio = tapped / total;
+            self.showResult(container, ratio, 'すごい', 'おしい');
+            setTimeout(() => callback(ratio), 800);
         }
     },
 
-    // === なぞりゲーム ===
+    // ==========================
+    // 2. なぞる（形をなぞる／実際の一致率で判定）
+    // ==========================
     startNazori: function(difficulty, container, callback) {
         container.innerHTML = '';
-        const timeLimit = difficulty === 'child' ? 8 : 2.5;
-        let timeLeft = timeLimit;
+        const isChild = difficulty === 'child';
+        const timeLimit = isChild ? 10 : 3;
+        // 判定の甘さ（線からどれだけ離れてよいか）
+        const tolerance = isChild ? 42 : 16;
 
-        const infoDiv = document.createElement('div');
-        infoDiv.style.position = 'absolute';
-        infoDiv.style.top = '20px';
-        infoDiv.style.width = '100%';
-        infoDiv.style.textAlign = 'center';
-        infoDiv.style.fontSize = '32px';
-        infoDiv.style.fontWeight = 'bold';
-        infoDiv.style.color = 'white';
-        infoDiv.style.textShadow = '0 2px 4px black';
-        infoDiv.innerHTML = `<span id="mg-time-nz">のこり: ${timeLeft}</span>`;
-        container.appendChild(infoDiv);
+        const shape = this._nazoriShapes[this._nazoriIndex % this._nazoriShapes.length];
+        this._nazoriIndex++;
+
+        const info = this.makeInfo(container, `<span id="mg-time-nz">のこり: ${timeLimit.toFixed(1)}</span>`);
 
         const canvas = document.createElement('canvas');
-        canvas.width = container.clientWidth * 0.9;
-        canvas.height = container.clientHeight * 0.6;
+        const cw = Math.min(container.clientWidth * 0.9, container.clientHeight * 0.62);
+        canvas.width = cw;
+        canvas.height = cw;
         canvas.style.position = 'absolute';
-        canvas.style.top = '100px';
+        canvas.style.top = '96px';
         canvas.style.left = '50%';
         canvas.style.transform = 'translateX(-50%)';
-        canvas.style.background = 'rgba(255,255,255,0.1)';
+        canvas.style.background = 'rgba(255,255,255,0.08)';
         canvas.style.borderRadius = '20px';
         canvas.style.touchAction = 'none';
         container.appendChild(canvas);
 
         const ctx = canvas.getContext('2d');
+        const path = shape.points.map(p => ({ x: canvas.width * p.x, y: canvas.height * p.y }));
 
-        // 形は順番にローテーション（ランダムにしない）
-        const shape = Minigames._nazoriShapes[Minigames._nazoriIndex % Minigames._nazoriShapes.length];
-        Minigames._nazoriIndex++;
-        const path = shape.map(p => ({ x: canvas.width * p.x, y: canvas.height * p.y }));
+        // 線上に等間隔のチェックポイントを敷き詰め、どれだけ通れたかで採点する
+        const checkpoints = [];
+        for (let i = 0; i < path.length; i++) {
+            const a = path[i];
+            const b = path[(i + 1) % path.length];
+            const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+            const steps = Math.max(2, Math.round(segLen / 10));
+            for (let s = 0; s < steps; s++) {
+                const t = s / steps;
+                checkpoints.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, hit: false });
+            }
+        }
 
-        function drawBase() {
-            ctx.clearRect(0,0, canvas.width, canvas.height);
+        function coverage() {
+            let hit = 0;
+            for (const c of checkpoints) if (c.hit) hit++;
+            return hit / checkpoints.length;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // お手本の線
             ctx.beginPath();
             ctx.moveTo(path[0].x, path[0].y);
-            for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
             ctx.closePath();
-            ctx.lineWidth = 40;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = tolerance * 1.4;
+            ctx.strokeStyle = 'rgba(255,255,255,0.18)';
             ctx.lineJoin = 'round';
             ctx.stroke();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            ctx.stroke();
+
+            // なぞれたところを光らせる
+            ctx.fillStyle = '#4facfe';
+            ctx.shadowColor = '#4facfe';
+            ctx.shadowBlur = 8;
+            for (const c of checkpoints) {
+                if (!c.hit) continue;
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
         }
+        draw();
 
-        drawBase();
-
-        let isDrawing = false;
-        let points = [];
-
-        function getPos(e) {
+        let drawing = false;
+        function pos(e) {
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
+                x: (e.clientX - rect.left) * (canvas.width / rect.width),
+                y: (e.clientY - rect.top) * (canvas.height / rect.height)
             };
         }
-
-        canvas.addEventListener('pointerdown', (e) => {
-            isDrawing = true;
-            points.push(getPos(e));
-        });
-        canvas.addEventListener('pointermove', (e) => {
-            if(!isDrawing) return;
-            const pos = getPos(e);
-            points.push(pos);
-
-            // 描画
-            drawBase();
-            ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y);
-            for(let i=1; i<points.length; i++) {
-                ctx.lineTo(points[i].x, points[i].y);
+        function mark(p) {
+            for (const c of checkpoints) {
+                if (c.hit) continue;
+                if (Math.hypot(c.x - p.x, c.y - p.y) <= tolerance) c.hit = true;
             }
-            ctx.lineWidth = 20;
-            ctx.strokeStyle = '#4facfe';
-            ctx.lineJoin = 'round';
-            ctx.lineCap = 'round';
-            ctx.stroke();
-        });
-        canvas.addEventListener('pointerup', () => {
-            isDrawing = false;
-        });
+            draw();
+            // ぜんぶなぞれたら自動で終了
+            if (coverage() >= 0.995) end();
+        }
 
-        // 「できた！」ボタン：なぞり終わったらすぐ終了できる
+        canvas.addEventListener('pointerdown', (e) => { drawing = true; canvas.setPointerCapture(e.pointerId); mark(pos(e)); });
+        canvas.addEventListener('pointermove', (e) => { if (drawing) mark(pos(e)); });
+        canvas.addEventListener('pointerup', () => { drawing = false; });
+        canvas.addEventListener('pointercancel', () => { drawing = false; });
+
         const doneBtn = document.createElement('button');
-        doneBtn.className = 'btn-primary';
-        doneBtn.innerText = 'できた！';
-        doneBtn.style.position = 'absolute';
-        doneBtn.style.left = '50%';
-        doneBtn.style.bottom = '40px';
-        doneBtn.style.transform = 'translateX(-50%)';
-        doneBtn.style.padding = '14px 32px';
-        doneBtn.style.fontSize = '20px';
-        doneBtn.onclick = () => endGame();
+        doneBtn.className = 'btn-primary mg-done-btn';
+        doneBtn.innerText = 'できた';
+        doneBtn.onclick = () => end();
         container.appendChild(doneBtn);
 
-        let timer;
-        function updateTime() {
-            timeLeft--;
-            const timeEl = document.getElementById('mg-time-nz');
-            if(timeEl) timeEl.innerText = 'のこり: ' + timeLeft;
-            if(timeLeft <= 0) {
-                endGame();
-            }
-        }
-        timer = setInterval(updateTime, 1000);
+        const stop = this.startTimer(timeLimit, (left) => {
+            const t = info.querySelector('#mg-time-nz');
+            if (t) t.innerText = 'のこり: ' + left.toFixed(1);
+        }, () => end());
 
         let ended = false;
-        function endGame() {
-            if(ended) return;
+        const self = this;
+        function end() {
+            if (ended) return;
             ended = true;
-            clearInterval(timer);
-
-            // 判定（簡易的に、描画点数で判定する。本来はパスとの距離計算）
-            let ratio = points.length > 20 ? 1.0 : (points.length / 20);
-            if(ratio > 1) ratio = 1;
-
-            // フィードバックテキスト
-            const fb = document.createElement('div');
-            fb.style.position = 'absolute';
-            fb.style.top = '50%';
-            fb.style.left = '50%';
-            fb.style.transform = 'translate(-50%, -50%)';
-            fb.style.fontSize = '48px';
-            fb.style.fontWeight = 'bold';
-            fb.style.whiteSpace = 'nowrap';
-            fb.style.color = ratio >= 0.7 ? 'var(--success)' : 'var(--danger)';
-            fb.style.textShadow = '0 2px 10px #000';
-            fb.innerText = ratio >= 0.7 ? 'すごい！' : 'もういっかい…';
-            container.appendChild(fb);
-
-            setTimeout(() => callback(ratio), 1000);
+            stop();
+            doneBtn.remove();
+            const ratio = Math.min(1, coverage());
+            self.showResult(container, ratio, 'すごい', 'もういっかい');
+            setTimeout(() => callback(ratio), 900);
         }
     },
 
-    // === タイミングゲーム ===
+    // ==========================
+    // 3. タイミング（形が重なったらタップ）
+    // ==========================
     startTiming: function(difficulty, container, callback) {
         container.innerHTML = '';
+        const isChild = difficulty === 'child';
+
+        const shape = this._timingShapes[this._timingIndex % this._timingShapes.length];
+        this._timingIndex++;
 
         const canvas = document.createElement('canvas');
         canvas.width = container.clientWidth;
@@ -284,97 +386,451 @@ const Minigames = {
         const ctx = canvas.getContext('2d');
         const cx = canvas.width / 2;
         const cy = canvas.height / 2;
-        const targetRadius = 100;
-        // 最初から見える大きさから収縮を始める（見え始めるまで待たされないように）
-        let currentRadius = Math.min(canvas.width, canvas.height) * 0.85;
+        const targetRadius = 95;
+        let radius = Math.min(canvas.width, canvas.height) * 0.85;
 
-        // 難易度による収縮スピード・判定幅・線の太さ
-        const shrinkSpeed = difficulty === 'child' ? 2.5 : 11;
-        const margin = difficulty === 'child' ? 70 : 12;
-        const ringWidth = difficulty === 'child' ? 26 : 8;
-
-        // 中央の記号は毎回ローテーション（見た目のバリエーション用）
-        const symbol = Minigames._symbols[Minigames._symbolIndex % Minigames._symbols.length];
-        Minigames._symbolIndex++;
-        const symbolEl = document.createElement('div');
-        symbolEl.innerText = symbol;
-        symbolEl.style.position = 'absolute';
-        symbolEl.style.left = cx + 'px';
-        symbolEl.style.top = cy + 'px';
-        symbolEl.style.transform = 'translate(-50%, -50%)';
-        symbolEl.style.fontSize = (targetRadius * 0.9) + 'px';
-        symbolEl.style.filter = 'drop-shadow(0 0 8px rgba(255,255,255,0.6))';
-        container.appendChild(symbolEl);
+        // こどもでも「ぴったり」は狙わないと出ないくらいの判定にする
+        const speed = isChild ? 2.2 : 9;
+        const perfect = isChild ? 26 : 9;
+        const good = isChild ? 52 : 20;
+        const ringWidth = isChild ? 16 : 8;
 
         let req;
+        const self = this;
         function loop() {
-            ctx.clearRect(0,0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // ターゲット円
-            ctx.beginPath();
-            ctx.arc(cx, cy, targetRadius, 0, Math.PI*2);
             ctx.lineWidth = ringWidth;
-            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-            ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            self.strokeShape(ctx, shape, cx, cy, targetRadius);
 
-            // 収縮円
-            ctx.beginPath();
-            ctx.arc(cx, cy, currentRadius, 0, Math.PI*2);
             ctx.lineWidth = ringWidth;
-            ctx.strokeStyle = '#4facfe';
-            ctx.shadowColor = '#4facfe';
-            ctx.shadowBlur = 12;
-            ctx.stroke();
+            const near = Math.abs(radius - targetRadius) <= perfect;
+            ctx.strokeStyle = near ? '#4ecdc4' : '#4facfe';
+            ctx.shadowColor = ctx.strokeStyle;
+            ctx.shadowBlur = near ? 24 : 12;
+            self.strokeShape(ctx, shape, cx, cy, radius);
             ctx.shadowBlur = 0;
 
-            currentRadius -= shrinkSpeed;
-
-            if(currentRadius < 10) {
-                // 自動ミス
-                endGame(0);
-            } else {
-                req = requestAnimationFrame(loop);
-            }
+            radius -= speed;
+            if (radius < 8) end(0);
+            else req = requestAnimationFrame(loop);
         }
         req = requestAnimationFrame(loop);
 
+        function onTap() {
+            if (ended) return;
+            const diff = Math.abs(radius - targetRadius);
+            if (diff <= perfect) end(1.0);
+            else if (diff <= good) end(0.55);
+            else end(0.15);
+        }
+        container.addEventListener('pointerdown', onTap);
+
         let ended = false;
-        function endGame(ratio) {
-            if(ended) return;
+        function end(ratio) {
+            if (ended) return;
             ended = true;
             cancelAnimationFrame(req);
+            container.removeEventListener('pointerdown', onTap);
+            self.showResult(container, ratio, 'ぴったり', 'おしい');
+            setTimeout(() => callback(ratio), 900);
+        }
+    },
 
-            const fb = document.createElement('div');
-            fb.style.position = 'absolute';
-            fb.style.top = '50%';
-            fb.style.left = '50%';
-            fb.style.transform = 'translate(-50%, -50%)';
-            fb.style.fontSize = '48px';
-            fb.style.fontWeight = 'bold';
-            fb.style.whiteSpace = 'nowrap';
-            fb.style.color = ratio >= 0.7 ? 'var(--success)' : 'var(--danger)';
-            fb.style.textShadow = '0 2px 10px #000';
-            fb.innerText = ratio >= 0.7 ? 'ぴったり！' : 'おしい！';
-            container.appendChild(fb);
-            symbolEl.remove();
+    // ==========================
+    // 4. れんだ（まんなかのボタンを連打）
+    // ==========================
+    startRenda: function(difficulty, container, callback) {
+        container.innerHTML = '';
+        const isChild = difficulty === 'child';
+        const timeLimit = isChild ? 5 : 4;
+        const goal = isChild ? 18 : 60;
+        let taps = 0;
 
-            setTimeout(() => callback(ratio), 1000);
+        const info = this.makeInfo(container,
+            `<span id="mg-time-rd">のこり: ${timeLimit.toFixed(1)}</span><br><span id="mg-score-rd">0 / ${goal}</span>`);
+
+        const btn = document.createElement('div');
+        btn.className = 'mg-renda-btn';
+        btn.innerText = 'れんだ';
+        container.appendChild(btn);
+
+        btn.addEventListener('pointerdown', () => {
+            if (ended) return;
+            taps++;
+            const s = info.querySelector('#mg-score-rd');
+            if (s) s.innerText = Math.min(taps, goal) + ' / ' + goal;
+            btn.classList.remove('pop');
+            void btn.offsetWidth;
+            btn.classList.add('pop');
+            if (taps >= goal) end();
+        });
+
+        const stop = this.startTimer(timeLimit, (left) => {
+            const t = info.querySelector('#mg-time-rd');
+            if (t) t.innerText = 'のこり: ' + left.toFixed(1);
+        }, () => end());
+
+        let ended = false;
+        const self = this;
+        function end() {
+            if (ended) return;
+            ended = true;
+            stop();
+            btn.remove();
+            const ratio = Math.min(1, taps / goal);
+            self.showResult(container, ratio, 'すごい', 'おしい');
+            setTimeout(() => callback(ratio), 800);
+        }
+    },
+
+    // ==========================
+    // 5. きりさく（スワイプで切る）
+    // ==========================
+    startSlash: function(difficulty, container, callback) {
+        container.innerHTML = '';
+        const isChild = difficulty === 'child';
+        const timeLimit = isChild ? 6 : 2.5;
+        const total = 6;
+        const hitRadius = isChild ? 52 : 26;
+        let slashed = 0;
+
+        const info = this.makeInfo(container,
+            `<span id="mg-time-sl">のこり: ${timeLimit.toFixed(1)}</span><br><span id="mg-score-sl">0 / ${total}</span>`);
+
+        const playArea = document.createElement('div');
+        playArea.style.position = 'absolute';
+        playArea.style.top = '110px';
+        playArea.style.bottom = '60px';
+        playArea.style.left = '28px';
+        playArea.style.right = '28px';
+        playArea.style.touchAction = 'none';
+        container.appendChild(playArea);
+
+        const SIZE = 74;
+        const positions = this.placeInGrid(total, SIZE, playArea.clientWidth, playArea.clientHeight);
+        const targets = [];
+        for (let i = 0; i < total; i++) {
+            const el = document.createElement('div');
+            el.className = 'mg-slash-target';
+            el.innerText = '✳';
+            el.style.left = positions[i].x + 'px';
+            el.style.top = positions[i].y + 'px';
+            playArea.appendChild(el);
+            targets.push({ el, done: false });
         }
 
-        container.addEventListener('pointerdown', () => {
-            if(ended) return;
-            // 判定計算
-            const diff = Math.abs(currentRadius - targetRadius);
-
-            let ratio = 0;
-            if(diff <= margin) {
-                ratio = 1.0;
-            } else if (diff <= margin * 2) {
-                ratio = 0.5;
-            } else {
-                ratio = 0.2;
+        function checkAt(clientX, clientY) {
+            for (const t of targets) {
+                if (t.done) continue;
+                const r = t.el.getBoundingClientRect();
+                const dx = (r.left + r.width / 2) - clientX;
+                const dy = (r.top + r.height / 2) - clientY;
+                if (Math.hypot(dx, dy) <= hitRadius) {
+                    t.done = true;
+                    t.el.classList.add('slashed');
+                    slashed++;
+                    const s = info.querySelector('#mg-score-sl');
+                    if (s) s.innerText = slashed + ' / ' + total;
+                    if (slashed >= total) end();
+                }
             }
-            endGame(ratio);
+        }
+
+        let swiping = false;
+        playArea.addEventListener('pointerdown', (e) => {
+            swiping = true;
+            playArea.setPointerCapture(e.pointerId);
+            checkAt(e.clientX, e.clientY);
         });
+        playArea.addEventListener('pointermove', (e) => { if (swiping) checkAt(e.clientX, e.clientY); });
+        playArea.addEventListener('pointerup', () => { swiping = false; });
+        playArea.addEventListener('pointercancel', () => { swiping = false; });
+
+        const stop = this.startTimer(timeLimit, (left) => {
+            const t = info.querySelector('#mg-time-sl');
+            if (t) t.innerText = 'のこり: ' + left.toFixed(1);
+        }, () => end());
+
+        let ended = false;
+        const self = this;
+        function end() {
+            if (ended) return;
+            ended = true;
+            stop();
+            const ratio = slashed / total;
+            self.showResult(container, ratio, 'すごい', 'おしい');
+            setTimeout(() => callback(ratio), 800);
+        }
+    },
+
+    // ==========================
+    // 6. もぐらたたき（出てきたらタップ）
+    // ==========================
+    startMogura: function(difficulty, container, callback) {
+        container.innerHTML = '';
+        const isChild = difficulty === 'child';
+        const total = isChild ? 8 : 14;
+        const upTime = isChild ? 1250 : 380;
+        let spawned = 0;
+        let hits = 0;
+
+        const info = this.makeInfo(container, `<span id="mg-score-mg">0 / ${total}</span>`);
+
+        const playArea = document.createElement('div');
+        playArea.style.position = 'absolute';
+        playArea.style.top = '100px';
+        playArea.style.bottom = '50px';
+        playArea.style.left = '24px';
+        playArea.style.right = '24px';
+        playArea.style.display = 'grid';
+        playArea.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        playArea.style.gridAutoRows = 'auto';
+        playArea.style.alignContent = 'center';
+        playArea.style.gap = '14px';
+        container.appendChild(playArea);
+
+        const holes = [];
+        for (let i = 0; i < 9; i++) {
+            const hole = document.createElement('div');
+            hole.className = 'mg-hole';
+            const mole = document.createElement('div');
+            mole.className = 'mg-mole';
+            mole.innerText = '🐹';
+            hole.appendChild(mole);
+            playArea.appendChild(hole);
+            holes.push({ hole, mole, up: false });
+        }
+
+        holes.forEach(h => {
+            h.mole.addEventListener('pointerdown', () => {
+                if (!h.up || ended) return;
+                h.up = false;
+                h.mole.classList.remove('up');
+                h.mole.classList.add('bonk');
+                setTimeout(() => h.mole.classList.remove('bonk'), 200);
+                hits++;
+                const s = info.querySelector('#mg-score-mg');
+                if (s) s.innerText = hits + ' / ' + total;
+            });
+        });
+
+        let ended = false;
+        let timeoutId = null;
+        const self = this;
+
+        function spawn() {
+            if (ended) return;
+            if (spawned >= total) { setTimeout(() => end(), upTime); return; }
+            spawned++;
+            const free = holes.filter(h => !h.up);
+            const h = free[Math.floor(Math.random() * free.length)];
+            h.up = true;
+            h.mole.classList.add('up');
+            timeoutId = setTimeout(() => {
+                if (h.up) { h.up = false; h.mole.classList.remove('up'); }
+                spawn();
+            }, upTime);
+        }
+        spawn();
+        function end() {
+            if (ended) return;
+            ended = true;
+            if (timeoutId) clearTimeout(timeoutId);
+            holes.forEach(h => h.mole.classList.remove('up'));
+            const ratio = hits / total;
+            self.showResult(container, ratio, 'すごい', 'おしい');
+            setTimeout(() => callback(ratio), 800);
+        }
     }
 };
+
+// ローテーションされるミニゲーム一覧（ここに足すだけで自動で組み込まれる）
+Minigames.list = [
+    {
+        id: 'collect',
+        getTitle: () => `${mgWord(Minigames.nextSymbol())}をあつめよう`,
+        start: (d, c, cb) => Minigames.startCollect(d, c, cb)
+    },
+    {
+        id: 'nazori',
+        getTitle: () => `${Minigames.nextNazoriShape().label}をなぞってみよう`,
+        start: (d, c, cb) => Minigames.startNazori(d, c, cb)
+    },
+    {
+        id: 'timing',
+        getTitle: () => `${Minigames.nextTimingShape().label}がかさなったら${mgWord(MG_TAP)}`,
+        start: (d, c, cb) => Minigames.startTiming(d, c, cb)
+    },
+    {
+        id: 'renda',
+        getTitle: () => 'まんなかを れんだしよう',
+        start: (d, c, cb) => Minigames.startRenda(d, c, cb)
+    },
+    {
+        id: 'slash',
+        getTitle: () => 'ゆびで なぞって きりさこう',
+        start: (d, c, cb) => Minigames.startSlash(d, c, cb)
+    },
+    {
+        id: 'mogura',
+        getTitle: () => `でてきたら ${mgWord(MG_TAP)}`,
+        start: (d, c, cb) => Minigames.startMogura(d, c, cb)
+    }
+];
+
+// ==========================
+// ひっさつわざ用ミニゲーム
+// callback には 0〜1 の成功度を渡す
+// ==========================
+const HissatsuGames = {
+    // 1〜10を順番に押す
+    startNumbers: function(difficulty, playArea, setTitle, callback) {
+        setTitle('じゅんばんに おして');
+        const total = 10;
+        const SIZE = 76;
+        let expected = 1;
+        let success = 0;
+
+        const positions = Minigames.placeInGrid(total, SIZE, playArea.clientWidth, playArea.clientHeight);
+        for (let i = 1; i <= total; i++) {
+            const btn = document.createElement('div');
+            btn.className = 'hs-number';
+            btn.innerText = i;
+            btn.style.left = positions[i - 1].x + 'px';
+            btn.style.top = positions[i - 1].y + 'px';
+            btn.addEventListener('pointerdown', () => {
+                if (ended) return;
+                if (i === expected) {
+                    btn.classList.add('ok');
+                    setTimeout(() => { btn.style.visibility = 'hidden'; }, 120);
+                    expected++;
+                    success++;
+                    if (success === total) end();
+                } else {
+                    btn.classList.add('ng');
+                    setTimeout(() => end(), 300);
+                }
+            });
+            playArea.appendChild(btn);
+        }
+
+        let ended = false;
+        function end() {
+            if (ended) return;
+            ended = true;
+            callback(success / total);
+        }
+    },
+
+    // 次々に光るまとを叩く
+    startRush: function(difficulty, playArea, setTitle, callback) {
+        setTitle('ひかったら すぐ おして');
+        const total = difficulty === 'child' ? 10 : 16;
+        const upTime = difficulty === 'child' ? 900 : 330;
+        const SIZE = 80;
+        let spawned = 0;
+        let hits = 0;
+
+        const slots = [];
+        const positions = Minigames.placeInGrid(9, SIZE, playArea.clientWidth, playArea.clientHeight);
+        for (let i = 0; i < 9; i++) {
+            const el = document.createElement('div');
+            el.className = 'hs-rush';
+            el.style.left = positions[i].x + 'px';
+            el.style.top = positions[i].y + 'px';
+            el.addEventListener('pointerdown', () => {
+                if (ended || !slot.on) return;
+                slot.on = false;
+                el.classList.remove('on');
+                hits++;
+            });
+            playArea.appendChild(el);
+            const slot = { el, on: false };
+            slots.push(slot);
+        }
+
+        let ended = false;
+        let timeoutId = null;
+
+        function spawn() {
+            if (ended) return;
+            if (spawned >= total) { setTimeout(() => end(), upTime); return; }
+            spawned++;
+            const free = slots.filter(s => !s.on);
+            const s = free[Math.floor(Math.random() * free.length)];
+            s.on = true;
+            s.el.classList.add('on');
+            timeoutId = setTimeout(() => {
+                if (s.on) { s.on = false; s.el.classList.remove('on'); }
+                spawn();
+            }, upTime);
+        }
+        spawn();
+
+        function end() {
+            if (ended) return;
+            ended = true;
+            if (timeoutId) clearTimeout(timeoutId);
+            callback(hits / total);
+        }
+    },
+
+    // ゆびでなぞって一気に切る
+    startCombo: function(difficulty, playArea, setTitle, callback) {
+        setTitle('ゆびで なぞって きりさこう');
+        const total = 10;
+        const SIZE = 74;
+        const hitRadius = difficulty === 'child' ? 54 : 28;
+        const timeLimit = difficulty === 'child' ? 5000 : 2200;
+        let slashed = 0;
+
+        playArea.style.touchAction = 'none';
+        const positions = Minigames.placeInGrid(total, SIZE, playArea.clientWidth, playArea.clientHeight);
+        const targets = [];
+        for (let i = 0; i < total; i++) {
+            const el = document.createElement('div');
+            el.className = 'hs-combo';
+            el.innerText = '✳';
+            el.style.left = positions[i].x + 'px';
+            el.style.top = positions[i].y + 'px';
+            playArea.appendChild(el);
+            targets.push({ el, done: false });
+        }
+
+        function checkAt(x, y) {
+            for (const t of targets) {
+                if (t.done) continue;
+                const r = t.el.getBoundingClientRect();
+                if (Math.hypot((r.left + r.width / 2) - x, (r.top + r.height / 2) - y) <= hitRadius) {
+                    t.done = true;
+                    t.el.classList.add('slashed');
+                    slashed++;
+                    if (slashed >= total) end();
+                }
+            }
+        }
+
+        let swiping = false;
+        playArea.addEventListener('pointerdown', (e) => { swiping = true; playArea.setPointerCapture(e.pointerId); checkAt(e.clientX, e.clientY); });
+        playArea.addEventListener('pointermove', (e) => { if (swiping) checkAt(e.clientX, e.clientY); });
+        playArea.addEventListener('pointerup', () => { swiping = false; });
+
+        const timerId = setTimeout(() => end(), timeLimit);
+
+        let ended = false;
+        function end() {
+            if (ended) return;
+            ended = true;
+            clearTimeout(timerId);
+            callback(slashed / total);
+        }
+    }
+};
+
+HissatsuGames.list = [
+    { id: 'numbers', start: HissatsuGames.startNumbers },
+    { id: 'rush', start: HissatsuGames.startRush },
+    { id: 'combo', start: HissatsuGames.startCombo }
+];

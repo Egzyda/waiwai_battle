@@ -10,10 +10,10 @@ const GameState = {
     hissatsuGauge: 0,
     turnIndex: 0, // 0, 1, 2 for party members
     inBattle: false,
-    minigameIndex: 0 // ミニゲームの種類をターンごとに順番に回すためのカウンタ
+    minigameIndex: 0, // ミニゲームの種類をターンごとに順番に回すためのカウンタ
+    hissatsuIndex: 0, // ひっさつわざミニゲームのローテーション用カウンタ
+    acceptingCommand: false // 味方のコマンド受付中だけ true
 };
-
-const MINIGAME_TYPES = ['renda', 'nazori', 'timing'];
 
 // UI Helpers
 function showScreen(screenId) {
@@ -146,6 +146,8 @@ function initCharacterSelect() {
     startBtn.classList.add('hidden');
     startBtn.onclick = () => initMap();
 
+    document.getElementById('party-back-btn').onclick = () => showScreen('title-screen');
+
     Object.values(CHARACTERS).forEach(char => {
         // キャラカード作成
         const card = document.createElement('div');
@@ -206,6 +208,9 @@ let generatedMapEnemies = [];
 function initMap() {
     GameState.currentNode = 0;
     GameState.minigameIndex = 0;
+    GameState.hissatsuIndex = 0;
+    GameState.hissatsuGauge = 0;
+    Minigames.reset();
 
     // パーティ初期化
     GameState.party.forEach(p => {
@@ -337,7 +342,7 @@ function renderBattle() {
     });
 
     updateHissatsuGauge();
-    document.getElementById('battle-log').innerHTML = `${rubyName(e)} が あらわれた！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(e)} が あらわれた`;
 }
 
 function updateHissatsuGauge() {
@@ -348,9 +353,16 @@ function updateHissatsuGauge() {
     
     fill.style.width = GameState.hissatsuGauge + '%';
     
-    if(GameState.hissatsuGauge >= 100) {
+    // ゲージ満タンでも、味方のコマンド受付中でなければ押せないようにする
+    // （敵のターンや演出中に割り込まれてターン進行が壊れるのを防ぐ）
+    if(GameState.hissatsuGauge >= 100 && GameState.acceptingCommand) {
         btn.disabled = false;
-        btn.onclick = () => startHissatsu();
+        btn.onclick = () => {
+            GameState.acceptingCommand = false;
+            document.getElementById('attack-btn').disabled = true;
+            updateHissatsuGauge();
+            startHissatsu();
+        };
     } else {
         btn.disabled = true;
         btn.onclick = null;
@@ -363,6 +375,10 @@ async function startAllyTurn() {
     
     // 全滅チェック
     if(GameState.party.every(p => p.currentHp <= 0)) {
+        GameState.inBattle = false;
+        GameState.acceptingCommand = false;
+        document.getElementById('attack-btn').disabled = true;
+        updateHissatsuGauge();
         await sleep(1000);
         showModal('まけ……', [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload()}]);
         return;
@@ -393,16 +409,20 @@ async function startAllyTurn() {
     document.querySelectorAll('.ally-card').forEach(c => c.classList.remove('acting'));
     document.getElementById('ally-card-' + GameState.turnIndex).classList.add('acting');
 
-    document.getElementById('battle-log').innerHTML = `${rubyName(currentAlly)} の ばん！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(currentAlly)} の ばん`;
     
     // コマンド受付（敵は常に1体なのでターゲット選択なしで直接ミニゲームへ）
     const atkBtn = document.getElementById('attack-btn');
+    GameState.acceptingCommand = true;
     atkBtn.disabled = false;
     atkBtn.onclick = () => {
         // ダメージ演出が終わって次のターンが来るまで連打できないようにする
+        GameState.acceptingCommand = false;
         atkBtn.disabled = true;
+        updateHissatsuGauge();
         prepareMinigame(currentAlly);
     };
+    updateHissatsuGauge();
 }
 
 function prepareMinigame(ally) {
@@ -417,25 +437,22 @@ function prepareMinigame(ally) {
     announce.classList.remove('hidden');
 
     // ミニゲームはキャラクターに関係なく、攻撃のたびに順番にローテーションする
-    const minigameType = MINIGAME_TYPES[GameState.minigameIndex % MINIGAME_TYPES.length];
+    const game = Minigames.list[GameState.minigameIndex % Minigames.list.length];
     GameState.minigameIndex++;
 
-    if(minigameType === 'renda') title.innerText = 'ほしをあつめよう';
-    if(minigameType === 'nazori') title.innerText = 'かたちをなぞってみよう';
-    if(minigameType === 'timing') title.innerText = 'まるがかさなったらタップ';
+    // 予告文は実際に出題される記号・形に合わせる
+    title.innerHTML = game.getTitle();
 
     startBtn.onclick = () => {
+        startBtn.onclick = null;
         announce.classList.add('hidden');
         container.classList.remove('hidden');
 
-        const callback = (ratio) => {
+        game.start(GameState.difficulty, container, (ratio) => {
+            container.innerHTML = '';
             overlay.classList.add('hidden');
             executeAttack(ally, ratio);
-        };
-
-        if(minigameType === 'renda') Minigames.startRenda(GameState.difficulty, container, callback);
-        if(minigameType === 'nazori') Minigames.startNazori(GameState.difficulty, container, callback);
-        if(minigameType === 'timing') Minigames.startTiming(GameState.difficulty, container, callback);
+        });
     };
 }
 
@@ -447,7 +464,7 @@ async function executeAttack(ally, successRatio) {
     
     const damage = Math.floor(baseDamage * multiplier * (0.9 + Math.random()*0.2));
     
-    document.getElementById('battle-log').innerHTML = `${rubyName(ally)} の こうげき！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(ally)} の こうげき`;
     await sleep(500);
     
     // 敵ダメージ処理
@@ -498,7 +515,7 @@ async function executeAttack(ally, successRatio) {
 }
 
 async function startEnemyTurn() {
-    document.getElementById('battle-log').innerHTML = `${rubyName(GameState.currentEnemy)} の こうげき！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(GameState.currentEnemy)} の こうげき`;
     document.querySelectorAll('.ally-card').forEach(c => c.classList.remove('acting'));
     
     await sleep(1000);
@@ -534,15 +551,32 @@ async function startEnemyTurn() {
 }
 
 async function winBattle() {
+    GameState.inBattle = false;
+    GameState.acceptingCommand = false;
+    document.getElementById('attack-btn').disabled = true;
+    updateHissatsuGauge();
+
     document.getElementById('battle-log').innerHTML = `${rubyName(GameState.currentEnemy)} を たおした！`;
-    await sleep(1500);
-    
-    if(GameState.currentNode === 4) {
-        showModal('やったー <ruby>クリア<rt>くりあ</rt></ruby>！🎉', [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload()}]);
+    await sleep(1200);
+
+    const isLast = GameState.currentNode === MAP_NODES.length - 1;
+    if(isLast) {
+        showModal(
+            `🎉<br>さいごの ${rubyName(GameState.currentEnemy)} に かった<br>やったー <ruby>クリア<rt>くりあ</rt></ruby>`,
+            [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload()}]
+        );
     } else {
-        GameState.currentNode++;
-        renderMap();
-        showScreen('map-screen');
+        // 敵を倒すたびに「しょうり」のモーダルを出す
+        const nokori = MAP_NODES.length - 1 - GameState.currentNode;
+        showModal(
+            `⚔️<br>しょうり<br>${rubyName(GameState.currentEnemy)} に かった<br>` +
+            `<span class="modal-sub">のこり ${nokori}たい</span>`,
+            [{text: 'つぎへ', onClick: () => {
+                GameState.currentNode++;
+                renderMap();
+                showScreen('map-screen');
+            }}]
+        );
     }
 }
 
@@ -552,75 +586,37 @@ async function winBattle() {
 function startHissatsu() {
     GameState.hissatsuGauge = 0;
     updateHissatsuGauge();
-    
+
     const overlay = document.getElementById('hissatsu-overlay');
     overlay.classList.remove('hidden');
-    overlay.innerHTML = '<div style="color:white; font-size:32px; font-weight:bold; margin-bottom:20px;">じゅんばんにおして！</div>';
-    
+    overlay.innerHTML = '';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'hs-title';
+    overlay.appendChild(titleEl);
+
     const playArea = document.createElement('div');
-    playArea.style.width = '100%';
-    playArea.style.height = '70%';
-    playArea.style.position = 'relative';
+    playArea.className = 'hs-play-area';
     overlay.appendChild(playArea);
 
-    let currentExpected = 1;
-    const totalNumbers = 10;
-    let successCount = 0;
-    const SIZE = 76; // 数字まるの直径
-    const MARGIN = 24; // 画面端すぎる位置に出ないようにする安全マージン
+    // ひっさつわざのミニゲームも順番にローテーションする
+    const game = HissatsuGames.list[GameState.hissatsuIndex % HissatsuGames.list.length];
+    GameState.hissatsuIndex++;
 
-    // 画面端すぎず、なるべく重ならない位置に配置
-    const areaW = Math.max(0, playArea.clientWidth - MARGIN * 2);
-    const areaH = Math.max(0, playArea.clientHeight - MARGIN * 2);
-    const positions = Minigames.placeNonOverlapping(totalNumbers, SIZE, areaW, areaH, SIZE * 1.15);
-
-    for(let i=1; i<=totalNumbers; i++) {
-        const btn = document.createElement('div');
-        btn.innerText = i;
-        btn.style.position = 'absolute';
-        btn.style.width = SIZE + 'px';
-        btn.style.height = SIZE + 'px';
-        btn.style.background = 'var(--warning-gradient)';
-        btn.style.border = '3px solid #fff';
-        btn.style.borderRadius = '50%';
-        btn.style.display = 'flex';
-        btn.style.alignItems = 'center';
-        btn.style.justifyContent = 'center';
-        btn.style.fontSize = '38px';
-        btn.style.fontWeight = 'bold';
-        btn.style.color = 'white';
-        btn.style.boxShadow = '0 4px 10px black, 0 0 18px rgba(245,175,25,0.9)';
-
-        btn.style.left = (MARGIN + positions[i - 1].x) + 'px';
-        btn.style.top = (MARGIN + positions[i - 1].y) + 'px';
-
-        btn.addEventListener('pointerdown', () => {
-            if(i === currentExpected) {
-                // 正解
-                btn.style.background = 'var(--success)';
-                setTimeout(() => btn.style.display = 'none', 100);
-                currentExpected++;
-                successCount++;
-                if(successCount === totalNumbers) {
-                    endHissatsu(successCount);
-                }
-            } else {
-                // 不正解 -> 終了
-                btn.style.background = 'var(--danger)';
-                setTimeout(() => endHissatsu(successCount), 300);
-            }
-        });
-        playArea.appendChild(btn);
-    }
-
-    function endHissatsu(count) {
-        overlay.classList.add('hidden');
-        executeHissatsuDamage(count);
-    }
+    game.start(
+        GameState.difficulty,
+        playArea,
+        (text) => { titleEl.innerText = text; },
+        (ratio) => {
+            overlay.classList.add('hidden');
+            overlay.innerHTML = '';
+            executeHissatsuDamage(ratio);
+        }
+    );
 }
 
-async function executeHissatsuDamage(successCount) {
-    document.getElementById('battle-log').innerText = 'ひっさつわざ ！！';
+async function executeHissatsuDamage(successRatio) {
+    document.getElementById('battle-log').innerText = 'ひっさつわざ！';
     
     // スカイパンチ演出風の全画面フラッシュ
     const flash = document.createElement('div');
@@ -643,13 +639,12 @@ async function executeHissatsuDamage(successCount) {
 
     await sleep(500);
 
-    // ダメージ計算
-    let multiplier = 1;
-    if(successCount >= 1 && successCount <= 3) multiplier = 1.5;
-    else if(successCount >= 4 && successCount <= 6) multiplier = 2.5;
-    else if(successCount >= 7 && successCount <= 9) multiplier = 4;
-    else if(successCount === 10) multiplier = 6;
-    else multiplier = 0; // 0問正解はミス
+    // ダメージ計算（成功度 0〜1 から倍率を決める）
+    let multiplier = 0;
+    if(successRatio >= 0.999) multiplier = 6;      // ぜんぶ成功
+    else if(successRatio >= 0.7) multiplier = 4;
+    else if(successRatio >= 0.4) multiplier = 2.5;
+    else if(successRatio > 0) multiplier = 1.5;
 
     if(multiplier > 0) {
         const totalAtk = GameState.party.reduce((sum, p) => p.currentHp > 0 ? sum + p.attack : sum, 0);
