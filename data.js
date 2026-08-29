@@ -36,19 +36,19 @@ const CHARACTERS = {
 
 const ENEMIES = {
     normal: [
-        { id: 'slime', name: 'スライム', reading: 'すらいむ', hp: 300, attack: 30 },
-        { id: 'kuribo', name: 'クリボー', reading: 'くりぼー', hp: 350, attack: 40 },
-        { id: 'abo', name: 'アーボ', reading: 'あーぼ', hp: 320, attack: 35 },
-        { id: 'wadorudo', name: 'ワドルドゥ', reading: 'わどるどぅ', hp: 400, attack: 45 }
+        { id: 'slime', name: 'スライム', reading: 'すらいむ', hp: 1400, attack: 30 },
+        { id: 'kuribo', name: 'クリボー', reading: 'くりぼー', hp: 1650, attack: 40 },
+        { id: 'abo', name: 'アーボ', reading: 'あーぼ', hp: 1500, attack: 35 },
+        { id: 'wadorudo', name: 'ワドルドゥ', reading: 'わどるどぅ', hp: 1900, attack: 45 }
     ],
     elite: [
-        { id: 'zabuza', name: '桃地再不斬', reading: 'ももち ざぶざ', hp: 800, attack: 80 },
-        { id: 'tomura', name: '死柄木弔', reading: 'しがらき とむら', hp: 900, attack: 90 },
-        { id: 'freeza', name: 'フリーザ', reading: 'ふりーざ', hp: 1000, attack: 100 }
+        { id: 'zabuza', name: '桃地再不斬', reading: 'ももち ざぶざ', hp: 2750, attack: 80 },
+        { id: 'tomura', name: '死柄木弔', reading: 'しがらき とむら', hp: 3100, attack: 90 },
+        { id: 'freeza', name: 'フリーザ', reading: 'ふりーざ', hp: 3450, attack: 100 }
     ],
     boss: [
-        { id: 'koopa', name: 'クッパ', reading: 'くっぱ', hp: 1500, attack: 150 },
-        { id: 'metaknight', name: 'メタナイト', reading: 'めたないと', hp: 1300, attack: 180 },
-        { id: 'masterhand', name: 'マスターハンド', reading: 'ますたーはんど', hp: 2000, attack: 120 }
+        { id: 'koopa', name: 'クッパ', reading: 'くっぱ', hp: 4750, attack: 150 },
+        { id: 'metaknight', name: 'メタナイト', reading: 'めたないと', hp: 4100, attack: 180 },
+        { id: 'masterhand', name: 'マスターハンド', reading: 'ますたーはんど', hp: 6300, attack: 120 }
     ]
 };

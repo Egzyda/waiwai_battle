@@ -189,8 +189,13 @@ function initMap() {
         let pool = ENEMIES.normal;
         if(n.type === 'elite') pool = ENEMIES.elite;
         if(n.type === 'boss') pool = ENEMIES.boss;
-        const enemy = pool[Math.floor(Math.random() * pool.length)];
-        generatedMapEnemies.push(JSON.parse(JSON.stringify(enemy)));
+        const enemy = JSON.parse(JSON.stringify(pool[Math.floor(Math.random() * pool.length)]));
+        if(n.type === 'normal_hard') {
+            // ノード3は同じザコ敵プールから少し強化して出す
+            enemy.hp = Math.floor(enemy.hp * 1.4);
+            enemy.attack = Math.floor(enemy.attack * 1.15);
+        }
+        generatedMapEnemies.push(enemy);
     });
 
     renderMap();
@@ -228,8 +233,9 @@ function renderPartyStatusBar() {
         const div = document.createElement('div');
         div.style.width = '30%';
         div.innerHTML = `
+            <img class="party-bar-img" src="img/${p.id}_face.png" onerror="this.src='img/icon.png'">
             <div class="party-bar-name">${rubyName(p)}</div>
-            <div class="hp-bar-bg" style="height:16px;">
+            <div class="hp-bar-bg" style="height:12px;">
                 <div class="hp-bar-fill" style="width:${(p.currentHp/p.hp)*100}%"></div>
             </div>
         `;
@@ -349,23 +355,10 @@ async function startAllyTurn() {
 
     document.getElementById('battle-log').innerHTML = `${rubyName(currentAlly)} の ばん！`;
     
-    // コマンド受付
+    // コマンド受付（敵は常に1体なのでターゲット選択なしで直接ミニゲームへ）
     const atkBtn = document.getElementById('attack-btn');
     atkBtn.onclick = () => {
-        // ターゲット選択（敵タップ）を促す
-        document.getElementById('battle-log').innerHTML = 'てき を <ruby>タップ<rt>たっぷ</rt></ruby>！';
-        const enemyImg = document.getElementById('battle-enemy-img');
-        enemyImg.style.cursor = 'pointer';
-        enemyImg.classList.add('flash');
-        
-        enemyImg.onclick = () => {
-            enemyImg.onclick = null;
-            enemyImg.style.cursor = 'default';
-            enemyImg.classList.remove('flash');
-            
-            // ミニゲーム開始
-            prepareMinigame(currentAlly);
-        };
+        prepareMinigame(currentAlly);
     };
 }
 
