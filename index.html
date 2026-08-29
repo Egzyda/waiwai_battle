@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>わいわいバトル</title>
+    <link rel="icon" href="img/icon.png">
+    <link rel="apple-touch-icon" href="img/icon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="orientation-warning">たてにしてください</div>
+    
+    <div id="game-container">
+        <!-- タイトル画面 -->
+        <div id="title-screen" class="screen active">
+            <h1 class="title-logo">わいわいバトル</h1>
+            
+            <button id="start-btn" class="btn-primary">ぼうけんボタン</button>
+            
+            <div class="title-footer">
+                <button id="difficulty-btn" class="btn-small">こどもモード</button>
+                <button id="update-btn" class="btn-small">🔄</button>
+            </div>
+        </div>
+
+        <!-- パーティ編成画面 -->
+        <div id="party-screen" class="screen">
+            <h2>3にんえらんでね</h2>
+            <div id="character-list"></div>
+            <button id="start-run-btn" class="btn-primary hidden">けってい</button>
+        </div>
+
+        <!-- ノードマップ画面 -->
+        <div id="map-screen" class="screen">
+            <div id="node-map"></div>
+            <div id="party-status-bar"></div>
+        </div>
+
+        <!-- 戦闘画面 -->
+        <div id="battle-screen" class="screen">
+            <div id="enemy-area"></div>
+            
+            <div id="hissatsu-area">
+                <button id="hissatsu-btn" class="btn-hissatsu" disabled>
+                    <div class="hissatsu-fill"></div>
+                    <span class="hissatsu-text">ひっさつわざ</span>
+                </button>
+            </div>
+
+            <div id="battle-log"></div>
+            <div id="ally-area"></div>
+            
+            <div id="command-area">
+                <button id="attack-btn" class="btn-attack">こうげき</button>
+            </div>
+        </div>
+
+        <!-- ミニゲーム用オーバーレイ -->
+        <div id="minigame-overlay" class="hidden">
+            <div id="minigame-announce">
+                <h2 id="minigame-title"></h2>
+                <button id="minigame-start-btn" class="btn-primary">スタート</button>
+            </div>
+            <div id="minigame-container" class="hidden"></div>
+        </div>
+        
+        <!-- 必殺技用オーバーレイ -->
+        <div id="hissatsu-overlay" class="hidden"></div>
+    </div>
+
+    <!-- モーダル・トースト用 -->
+    <div id="toast-container"></div>
+    <div id="modal-overlay" class="hidden">
+        <div class="modal-content">
+            <p id="modal-text"></p>
+            <div id="modal-buttons"></div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="minigames.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
