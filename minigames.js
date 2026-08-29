@@ -16,6 +16,32 @@ const Minigames = {
     ],
     _nazoriIndex: 0,
 
+    // れんだ・タイミングで使う記号（順番にローテーションする）
+    _symbols: ['⭐', '💎', '🍀', '🎈', '🍭', '⚽'],
+    _symbolIndex: 0,
+
+    // 指定した個数ぶん、なるべく重ならない位置を抽選する
+    placeNonOverlapping: function(count, itemSize, areaW, areaH, minGap) {
+        const positions = [];
+        for (let i = 0; i < count; i++) {
+            let pos = null;
+            for (let attempt = 0; attempt < 40; attempt++) {
+                const candidate = {
+                    x: Math.random() * Math.max(0, areaW - itemSize),
+                    y: Math.random() * Math.max(0, areaH - itemSize)
+                };
+                const ok = positions.every(p => {
+                    const dx = p.x - candidate.x, dy = p.y - candidate.y;
+                    return Math.sqrt(dx * dx + dy * dy) >= minGap;
+                });
+                pos = candidate;
+                if (ok) break;
+            }
+            positions.push(pos);
+        }
+        return positions;
+    },
+
     // === 連打ゲーム ===
     startRenda: function(difficulty, container, callback) {
         container.innerHTML = '';
@@ -46,14 +72,23 @@ const Minigames = {
         playArea.style.right = MARGIN + 'px';
         container.appendChild(playArea);
 
-        // 星を配置
+        // 記号は毎回ローテーション（見た目のバリエーション用）
+        const symbol = Minigames._symbols[Minigames._symbolIndex % Minigames._symbols.length];
+        Minigames._symbolIndex++;
+
+        // 星（記号）をなるべく重ならない位置に配置
+        const STAR_SIZE = 70;
+        const positions = Minigames.placeNonOverlapping(
+            totalStars, STAR_SIZE, playArea.clientWidth, playArea.clientHeight, STAR_SIZE * 1.1
+        );
+
         for(let i=0; i<totalStars; i++) {
             const star = document.createElement('div');
-            star.innerHTML = '⭐';
+            star.innerHTML = symbol;
             star.style.position = 'absolute';
             star.style.fontSize = '64px';
-            star.style.left = Math.random() * Math.max(0, playArea.clientWidth - 70) + 'px';
-            star.style.top = Math.random() * Math.max(0, playArea.clientHeight - 70) + 'px';
+            star.style.left = positions[i].x + 'px';
+            star.style.top = positions[i].y + 'px';
             star.style.transition = 'transform 0.1s';
             star.style.filter = 'drop-shadow(0 0 10px gold) drop-shadow(0 0 4px orange)';
 
@@ -224,6 +259,7 @@ const Minigames = {
             fb.style.transform = 'translate(-50%, -50%)';
             fb.style.fontSize = '48px';
             fb.style.fontWeight = 'bold';
+            fb.style.whiteSpace = 'nowrap';
             fb.style.color = ratio >= 0.7 ? 'var(--success)' : 'var(--danger)';
             fb.style.textShadow = '0 2px 10px #000';
             fb.innerText = ratio >= 0.7 ? 'すごい！' : 'もういっかい…';
@@ -256,6 +292,19 @@ const Minigames = {
         const shrinkSpeed = difficulty === 'child' ? 2.5 : 11;
         const margin = difficulty === 'child' ? 70 : 12;
         const ringWidth = difficulty === 'child' ? 26 : 8;
+
+        // 中央の記号は毎回ローテーション（見た目のバリエーション用）
+        const symbol = Minigames._symbols[Minigames._symbolIndex % Minigames._symbols.length];
+        Minigames._symbolIndex++;
+        const symbolEl = document.createElement('div');
+        symbolEl.innerText = symbol;
+        symbolEl.style.position = 'absolute';
+        symbolEl.style.left = cx + 'px';
+        symbolEl.style.top = cy + 'px';
+        symbolEl.style.transform = 'translate(-50%, -50%)';
+        symbolEl.style.fontSize = (targetRadius * 0.9) + 'px';
+        symbolEl.style.filter = 'drop-shadow(0 0 8px rgba(255,255,255,0.6))';
+        container.appendChild(symbolEl);
 
         let req;
         function loop() {
@@ -302,10 +351,12 @@ const Minigames = {
             fb.style.transform = 'translate(-50%, -50%)';
             fb.style.fontSize = '48px';
             fb.style.fontWeight = 'bold';
+            fb.style.whiteSpace = 'nowrap';
             fb.style.color = ratio >= 0.7 ? 'var(--success)' : 'var(--danger)';
             fb.style.textShadow = '0 2px 10px #000';
             fb.innerText = ratio >= 0.7 ? 'ぴったり！' : 'おしい！';
             container.appendChild(fb);
+            symbolEl.remove();
 
             setTimeout(() => callback(ratio), 1000);
         }

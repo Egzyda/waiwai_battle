@@ -67,6 +67,11 @@ body {
     display: flex;
     flex-direction: column;
     background: rgba(11, 12, 21, 0.8);
+    /* ノッチ・カメラ穴などに文字が隠れないようセーフエリア分の余白を確保 */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
 }
 /* タブレット(Fire Kidsなど)でも画面いっぱいに最適化されるよう幅を拡張し、
    内部のフォントサイズはコンテナ幅基準(cqw)で追従させる */
@@ -130,8 +135,8 @@ body {
 
 .title-footer {
     position: absolute;
-    bottom: 20px;
-    right: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    right: calc(20px + env(safe-area-inset-right, 0px));
     display: flex;
     gap: 10px;
 }
@@ -208,7 +213,7 @@ body {
 }
 #start-run-btn {
     position: absolute;
-    bottom: 30px;
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
@@ -474,6 +479,10 @@ body {
     transform: translateY(8px);
     box-shadow: 0 0 0 #cc4a4e, 0 5px 10px rgba(0,0,0,0.5);
 }
+.btn-attack:disabled {
+    opacity: 0.5;
+    filter: grayscale(0.6);
+}
 
 /* Modals & Overlays */
 #modal-overlay {
@@ -484,6 +493,8 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+             env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     z-index: 1000;
 }
 /* ミニゲーム・必殺技はゲーム画面(#game-container)の内側に収める
@@ -581,7 +592,7 @@ ruby rt {
 /* Toast */
 #toast-container {
     position: fixed;
-    top: 20px;
+    top: calc(20px + env(safe-area-inset-top, 0px));
     left: 50%;
     transform: translateX(-50%);
     z-index: 9999;

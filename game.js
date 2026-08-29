@@ -9,8 +9,11 @@ const GameState = {
     currentEnemy: null,
     hissatsuGauge: 0,
     turnIndex: 0, // 0, 1, 2 for party members
-    inBattle: false
+    inBattle: false,
+    minigameIndex: 0 // ミニゲームの種類をターンごとに順番に回すためのカウンタ
 };
+
+const MINIGAME_TYPES = ['renda', 'nazori', 'timing'];
 
 // UI Helpers
 function showScreen(screenId) {
@@ -143,19 +146,11 @@ function initCharacterSelect() {
     startBtn.classList.add('hidden');
     startBtn.onclick = () => initMap();
 
-    // ミニゲーム割り当て用
-    const mgTypes = ['renda', 'nazori', 'timing'];
-    let idx = 0;
-
     Object.values(CHARACTERS).forEach(char => {
         // キャラカード作成
         const card = document.createElement('div');
         card.className = 'char-card';
         card.dataset.id = char.id;
-        
-        // ミニゲームタイプをローテーションで割り当て
-        char.minigame = mgTypes[idx % 3];
-        idx++;
 
         card.innerHTML = `
             <div class="char-thumb">
@@ -210,7 +205,8 @@ let generatedMapEnemies = [];
 
 function initMap() {
     GameState.currentNode = 0;
-    
+    GameState.minigameIndex = 0;
+
     // パーティ初期化
     GameState.party.forEach(p => {
         p.currentHp = p.hp;
@@ -401,7 +397,10 @@ async function startAllyTurn() {
     
     // コマンド受付（敵は常に1体なのでターゲット選択なしで直接ミニゲームへ）
     const atkBtn = document.getElementById('attack-btn');
+    atkBtn.disabled = false;
     atkBtn.onclick = () => {
+        // ダメージ演出が終わって次のターンが来るまで連打できないようにする
+        atkBtn.disabled = true;
         prepareMinigame(currentAlly);
     };
 }
@@ -417,22 +416,26 @@ function prepareMinigame(ally) {
     container.classList.add('hidden');
     announce.classList.remove('hidden');
 
-    if(ally.minigame === 'renda') title.innerText = 'ほしをあつめよう';
-    if(ally.minigame === 'nazori') title.innerText = 'かたちをなぞってみよう';
-    if(ally.minigame === 'timing') title.innerText = 'まるがかさなったらタップ';
+    // ミニゲームはキャラクターに関係なく、攻撃のたびに順番にローテーションする
+    const minigameType = MINIGAME_TYPES[GameState.minigameIndex % MINIGAME_TYPES.length];
+    GameState.minigameIndex++;
+
+    if(minigameType === 'renda') title.innerText = 'ほしをあつめよう';
+    if(minigameType === 'nazori') title.innerText = 'かたちをなぞってみよう';
+    if(minigameType === 'timing') title.innerText = 'まるがかさなったらタップ';
 
     startBtn.onclick = () => {
         announce.classList.add('hidden');
         container.classList.remove('hidden');
-        
+
         const callback = (ratio) => {
             overlay.classList.add('hidden');
             executeAttack(ally, ratio);
         };
 
-        if(ally.minigame === 'renda') Minigames.startRenda(GameState.difficulty, container, callback);
-        if(ally.minigame === 'nazori') Minigames.startNazori(GameState.difficulty, container, callback);
-        if(ally.minigame === 'timing') Minigames.startTiming(GameState.difficulty, container, callback);
+        if(minigameType === 'renda') Minigames.startRenda(GameState.difficulty, container, callback);
+        if(minigameType === 'nazori') Minigames.startNazori(GameState.difficulty, container, callback);
+        if(minigameType === 'timing') Minigames.startTiming(GameState.difficulty, container, callback);
     };
 }
 
@@ -566,6 +569,11 @@ function startHissatsu() {
     const SIZE = 76; // 数字まるの直径
     const MARGIN = 24; // 画面端すぎる位置に出ないようにする安全マージン
 
+    // 画面端すぎず、なるべく重ならない位置に配置
+    const areaW = Math.max(0, playArea.clientWidth - MARGIN * 2);
+    const areaH = Math.max(0, playArea.clientHeight - MARGIN * 2);
+    const positions = Minigames.placeNonOverlapping(totalNumbers, SIZE, areaW, areaH, SIZE * 1.15);
+
     for(let i=1; i<=totalNumbers; i++) {
         const btn = document.createElement('div');
         btn.innerText = i;
@@ -583,10 +591,8 @@ function startHissatsu() {
         btn.style.color = 'white';
         btn.style.boxShadow = '0 4px 10px black, 0 0 18px rgba(245,175,25,0.9)';
 
-        const areaW = Math.max(0, playArea.clientWidth - SIZE - MARGIN * 2);
-        const areaH = Math.max(0, playArea.clientHeight - SIZE - MARGIN * 2);
-        btn.style.left = (MARGIN + Math.random() * areaW) + 'px';
-        btn.style.top = (MARGIN + Math.random() * areaH) + 'px';
+        btn.style.left = (MARGIN + positions[i - 1].x) + 'px';
+        btn.style.top = (MARGIN + positions[i - 1].y) + 'px';
 
         btn.addEventListener('pointerdown', () => {
             if(i === currentExpected) {
