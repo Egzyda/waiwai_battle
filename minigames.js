@@ -16,7 +16,7 @@
         infoDiv.style.fontWeight = 'bold';
         infoDiv.style.color = 'white';
         infoDiv.style.textShadow = '0 2px 4px black';
-        infoDiv.innerHTML = <span id="mg-time">のこり:  + timeLeft + </span> <br> <span id="mg-score">0 / 10</span>;
+        infoDiv.innerHTML = `<span id="mg-time">のこり: ${timeLeft}</span> <br> <span id="mg-score">0 / 10</span>`;
         container.appendChild(infoDiv);
 
         const playArea = document.createElement('div');
@@ -98,7 +98,7 @@
         infoDiv.style.fontWeight = 'bold';
         infoDiv.style.color = 'white';
         infoDiv.style.textShadow = '0 2px 4px black';
-        infoDiv.innerHTML = <span id="mg-time-nz">のこり:  + timeLeft + </span>;
+        infoDiv.innerHTML = `<span id="mg-time-nz">のこり: ${timeLeft}</span>`;
         container.appendChild(infoDiv);
 
         const canvas = document.createElement('canvas');

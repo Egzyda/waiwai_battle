@@ -116,13 +116,13 @@ function initCharacterSelect() {
         if(char.minigame === 'nazori') mgIcon = '✍️';
         if(char.minigame === 'timing') mgIcon = '⭕';
 
-        card.innerHTML = 
-            <img src="img/_face.png" alt="" onerror="this.src='img/icon.png'">
-            <div class="char-minigame-icon"></div>
-            <div class="char-stats-adult ">
-                HP: 攻:
+        card.innerHTML = `
+            <img src="img/${char.id}_face.png" alt="${char.name}" onerror="this.src='img/icon.png'">
+            <div class="char-minigame-icon">${mgIcon}</div>
+            <div class="char-stats-adult ${GameState.difficulty === 'adult' ? 'visible' : ''}">
+                HP:${char.hp} 攻:${char.attack}
             </div>
-        ;
+        `;
 
         card.onclick = () => {
             const index = GameState.party.findIndex(c => c.id === char.id);
@@ -198,7 +198,7 @@ function renderMap() {
         if(i === GameState.currentNode) nodeDiv.classList.add('active');
 
         const enemy = generatedMapEnemies[i];
-        nodeDiv.innerHTML = <img src="img/enemy/.png" onerror="this.src='img/icon.png'">;
+        nodeDiv.innerHTML = `<img src="img/enemy/${enemy.id}.png" onerror="this.src='img/icon.png'">`;
 
         nodeDiv.onclick = () => {
             if(i === GameState.currentNode) {
@@ -217,12 +217,12 @@ function renderPartyStatusBar() {
     GameState.party.forEach(p => {
         const div = document.createElement('div');
         div.style.width = '30%';
-        div.innerHTML = 
-            <div style="font-size:10px;"></div>
+        div.innerHTML = `
+            <div style="font-size:10px;">${p.name}</div>
             <div class="hp-bar-bg" style="height:16px;">
-                <div class="hp-bar-fill" style="width:%"></div>
+                <div class="hp-bar-fill" style="width:${(p.currentHp/p.hp)*100}%"></div>
             </div>
-        ;
+        `;
         bar.appendChild(div);
     });
 }
@@ -251,16 +251,16 @@ function renderBattle() {
     // 敵エリア
     const enemyArea = document.getElementById('enemy-area');
     const e = GameState.currentEnemy;
-    enemyArea.innerHTML = 
+    enemyArea.innerHTML = `
         <div class="enemy-container">
-            <img src="img/enemy/.png" class="enemy-img" id="battle-enemy-img" onerror="this.src='img/icon.png'">
-            <div style="font-size: 24px; font-weight: bold; margin-top: 10px;"></div>
+            <img src="img/enemy/${e.id}.png" class="enemy-img" id="battle-enemy-img" onerror="this.src='img/icon.png'">
+            <div style="font-size: 24px; font-weight: bold; margin-top: 10px;">${e.name}</div>
             <div class="hp-bar-bg" style="width: 250px; height: 20px; margin: 5px auto;">
-                <div class="hp-bar-fill" id="enemy-hp-fill" style="width:%"></div>
+                <div class="hp-bar-fill" id="enemy-hp-fill" style="width:${(e.currentHp/e.maxHp)*100}%"></div>
             </div>
-            <div class="hp-text" id="enemy-hp-text"> / </div>
+            <div class="hp-text" id="enemy-hp-text">${e.currentHp} / ${e.maxHp}</div>
         </div>
-    ;
+    `;
 
     // 味方エリア
     const allyArea = document.getElementById('ally-area');
@@ -269,18 +269,18 @@ function renderBattle() {
         const card = document.createElement('div');
         card.className = 'ally-card' + (p.currentHp <= 0 ? ' dead' : '');
         card.id = 'ally-card-' + idx;
-        card.innerHTML = 
-            <img src="img/_face.png" class="ally-img" onerror="this.src='img/icon.png'">
+        card.innerHTML = `
+            <img src="img/${p.id}_face.png" class="ally-img" onerror="this.src='img/icon.png'">
             <div class="hp-bar-bg">
-                <div class="hp-bar-fill" id="ally-hp-fill-" style="width:%"></div>
+                <div class="hp-bar-fill" id="ally-hp-fill-${idx}" style="width:${(p.currentHp/p.hp)*100}%"></div>
             </div>
-            <div class="hp-text" id="ally-hp-text-"> / </div>
-        ;
+            <div class="hp-text" id="ally-hp-text-${idx}">${p.currentHp} / ${p.hp}</div>
+        `;
         allyArea.appendChild(card);
     });
 
     updateHissatsuGauge();
-    document.getElementById('battle-log').innerText = ${e.name} が あらわれた！;
+    document.getElementById('battle-log').innerText = `${e.name} が あらわれた！`;
 }
 
 function updateHissatsuGauge() {
@@ -336,7 +336,7 @@ async function startAllyTurn() {
     document.querySelectorAll('.ally-card').forEach(c => c.classList.remove('acting'));
     document.getElementById('ally-card-' + GameState.turnIndex).classList.add('acting');
 
-    document.getElementById('battle-log').innerText = ${currentAlly.name} の ばん！;
+    document.getElementById('battle-log').innerText = `${currentAlly.name} の ばん！`;
     
     // コマンド受付
     const atkBtn = document.getElementById('attack-btn');
@@ -396,7 +396,7 @@ async function executeAttack(ally, successRatio) {
     
     const damage = Math.floor(baseDamage * multiplier * (0.9 + Math.random()*0.2));
     
-    document.getElementById('battle-log').innerText = ${ally.name} の こうげき！;
+    document.getElementById('battle-log').innerText = `${ally.name} の こうげき！`;
     await sleep(500);
     
     // 敵ダメージ処理
@@ -409,7 +409,7 @@ async function executeAttack(ally, successRatio) {
     setTimeout(() => enemyImg.classList.remove('flash'), 300);
     
     document.getElementById('enemy-hp-fill').style.width = (e.currentHp/e.maxHp)*100 + '%';
-    document.getElementById('enemy-hp-text').innerText = ${e.currentHp} / ;
+    document.getElementById('enemy-hp-text').innerText = `${e.currentHp} / ${e.maxHp}`;
     
     // ダメージ数値ポップアップ
     const dmgPop = document.createElement('div');
@@ -447,7 +447,7 @@ async function executeAttack(ally, successRatio) {
 }
 
 async function startEnemyTurn() {
-    document.getElementById('battle-log').innerText = ${GameState.currentEnemy.name} の こうげき！;
+    document.getElementById('battle-log').innerText = `${GameState.currentEnemy.name} の こうげき！`;
     document.querySelectorAll('.ally-card').forEach(c => c.classList.remove('acting'));
     
     await sleep(1000);
@@ -470,7 +470,7 @@ async function startEnemyTurn() {
     setTimeout(() => card.classList.remove('shake'), 400);
     
     document.getElementById('ally-hp-fill-' + targetIdx).style.width = (target.currentHp/target.hp)*100 + '%';
-    document.getElementById('ally-hp-text-' + targetIdx).innerText = ${target.currentHp} / ;
+    document.getElementById('ally-hp-text-' + targetIdx).innerText = `${target.currentHp} / ${target.hp}`;
     if(target.currentHp <= 0) {
         card.classList.add('dead');
     }
@@ -483,7 +483,7 @@ async function startEnemyTurn() {
 }
 
 async function winBattle() {
-    document.getElementById('battle-log').innerText = ${GameState.currentEnemy.name} を たおした！;
+    document.getElementById('battle-log').innerText = `${GameState.currentEnemy.name} を たおした！`;
     await sleep(1500);
     
     if(GameState.currentNode === 4) {
@@ -601,7 +601,7 @@ async function executeHissatsuDamage(successCount) {
         if(e.currentHp < 0) e.currentHp = 0;
         
         document.getElementById('enemy-hp-fill').style.width = (e.currentHp/e.maxHp)*100 + '%';
-        document.getElementById('enemy-hp-text').innerText = ${e.currentHp} / ;
+        document.getElementById('enemy-hp-text').innerText = `${e.currentHp} / ${e.maxHp}`;
         
         const dmgPop = document.createElement('div');
         dmgPop.innerText = damage;
