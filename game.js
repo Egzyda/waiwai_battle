@@ -29,7 +29,7 @@ function showModal(text, buttons = [{ text: 'OK', onClick: () => closeModal() }]
     buttons.forEach(b => {
         const btn = document.createElement('button');
         btn.className = 'btn-primary';
-        btn.innerText = b.text;
+        btn.innerHTML = b.text;
         btn.onclick = () => {
             if(b.onClick) b.onClick();
             closeModal();
@@ -60,6 +60,13 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// 名前をルビ付きで表示するためのHTMLを作る
+function rubyName(unit) {
+    if(!unit || !unit.name) return '';
+    if(!unit.reading) return unit.name;
+    return `<ruby>${unit.name}<rt>${unit.reading}</rt></ruby>`;
+}
+
 // ==========================
 // 初期化・タイトル画面
 // ==========================
@@ -74,10 +81,10 @@ function initTitle() {
     diffBtn.onclick = () => {
         if(GameState.difficulty === 'child') {
             GameState.difficulty = 'adult';
-            diffBtn.innerText = 'おとなモード';
+            diffBtn.innerHTML = 'おとな<ruby>モード<rt>もーど</rt></ruby>';
         } else {
             GameState.difficulty = 'child';
-            diffBtn.innerText = 'こどもモード';
+            diffBtn.innerHTML = 'こども<ruby>モード<rt>もーど</rt></ruby>';
         }
     };
 
@@ -117,11 +124,14 @@ function initCharacterSelect() {
         if(char.minigame === 'timing') mgIcon = '⭕';
 
         card.innerHTML = `
-            <img src="img/${char.id}_face.png" alt="${char.name}" onerror="this.src='img/icon.png'">
-            <div class="char-minigame-icon">${mgIcon}</div>
-            <div class="char-stats-adult ${GameState.difficulty === 'adult' ? 'visible' : ''}">
-                HP:${char.hp} 攻:${char.attack}
+            <div class="char-thumb">
+                <img src="img/${char.id}_face.png" alt="${char.name}" onerror="this.src='img/icon.png'">
+                <div class="char-minigame-icon">${mgIcon}</div>
+                <div class="char-stats-adult ${GameState.difficulty === 'adult' ? 'visible' : ''}">
+                    HP:${char.hp} 攻:${char.attack}
+                </div>
             </div>
+            <div class="char-name">${rubyName(char)}</div>
         `;
 
         card.onclick = () => {
@@ -218,7 +228,7 @@ function renderPartyStatusBar() {
         const div = document.createElement('div');
         div.style.width = '30%';
         div.innerHTML = `
-            <div style="font-size:10px;">${p.name}</div>
+            <div class="party-bar-name">${rubyName(p)}</div>
             <div class="hp-bar-bg" style="height:16px;">
                 <div class="hp-bar-fill" style="width:${(p.currentHp/p.hp)*100}%"></div>
             </div>
@@ -254,7 +264,7 @@ function renderBattle() {
     enemyArea.innerHTML = `
         <div class="enemy-container">
             <img src="img/enemy/${e.id}.png" class="enemy-img" id="battle-enemy-img" onerror="this.src='img/icon.png'">
-            <div style="font-size: 24px; font-weight: bold; margin-top: 10px;">${e.name}</div>
+            <div class="enemy-name">${rubyName(e)}</div>
             <div class="hp-bar-bg" style="width: 250px; height: 20px; margin: 5px auto;">
                 <div class="hp-bar-fill" id="enemy-hp-fill" style="width:${(e.currentHp/e.maxHp)*100}%"></div>
             </div>
@@ -271,6 +281,7 @@ function renderBattle() {
         card.id = 'ally-card-' + idx;
         card.innerHTML = `
             <img src="img/${p.id}_face.png" class="ally-img" onerror="this.src='img/icon.png'">
+            <div class="ally-name">${rubyName(p)}</div>
             <div class="hp-bar-bg">
                 <div class="hp-bar-fill" id="ally-hp-fill-${idx}" style="width:${(p.currentHp/p.hp)*100}%"></div>
             </div>
@@ -280,7 +291,7 @@ function renderBattle() {
     });
 
     updateHissatsuGauge();
-    document.getElementById('battle-log').innerText = `${e.name} が あらわれた！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(e)} が あらわれた！`;
 }
 
 function updateHissatsuGauge() {
@@ -307,7 +318,7 @@ async function startAllyTurn() {
     // 全滅チェック
     if(GameState.party.every(p => p.currentHp <= 0)) {
         await sleep(1000);
-        showModal('まけ……', [{text: 'タイトルへ', onClick: () => location.reload()}]);
+        showModal('まけ……', [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload()}]);
         return;
     }
 
@@ -336,13 +347,13 @@ async function startAllyTurn() {
     document.querySelectorAll('.ally-card').forEach(c => c.classList.remove('acting'));
     document.getElementById('ally-card-' + GameState.turnIndex).classList.add('acting');
 
-    document.getElementById('battle-log').innerText = `${currentAlly.name} の ばん！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(currentAlly)} の ばん！`;
     
     // コマンド受付
     const atkBtn = document.getElementById('attack-btn');
     atkBtn.onclick = () => {
         // ターゲット選択（敵タップ）を促す
-        document.getElementById('battle-log').innerText = 'てき を タップ！';
+        document.getElementById('battle-log').innerHTML = 'てき を <ruby>タップ<rt>たっぷ</rt></ruby>！';
         const enemyImg = document.getElementById('battle-enemy-img');
         enemyImg.style.cursor = 'pointer';
         enemyImg.classList.add('flash');
@@ -396,7 +407,7 @@ async function executeAttack(ally, successRatio) {
     
     const damage = Math.floor(baseDamage * multiplier * (0.9 + Math.random()*0.2));
     
-    document.getElementById('battle-log').innerText = `${ally.name} の こうげき！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(ally)} の こうげき！`;
     await sleep(500);
     
     // 敵ダメージ処理
@@ -447,7 +458,7 @@ async function executeAttack(ally, successRatio) {
 }
 
 async function startEnemyTurn() {
-    document.getElementById('battle-log').innerText = `${GameState.currentEnemy.name} の こうげき！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(GameState.currentEnemy)} の こうげき！`;
     document.querySelectorAll('.ally-card').forEach(c => c.classList.remove('acting'));
     
     await sleep(1000);
@@ -483,11 +494,11 @@ async function startEnemyTurn() {
 }
 
 async function winBattle() {
-    document.getElementById('battle-log').innerText = `${GameState.currentEnemy.name} を たおした！`;
+    document.getElementById('battle-log').innerHTML = `${rubyName(GameState.currentEnemy)} を たおした！`;
     await sleep(1500);
     
     if(GameState.currentNode === 4) {
-        showModal('やったー クリア！🎉', [{text: 'タイトルへ', onClick: () => location.reload()}]);
+        showModal('やったー <ruby>クリア<rt>くりあ</rt></ruby>！🎉', [{text: '<ruby>タイトル<rt>たいとる</rt></ruby>へ', onClick: () => location.reload()}]);
     } else {
         GameState.currentNode++;
         renderMap();
