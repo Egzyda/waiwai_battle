@@ -167,7 +167,7 @@
                 ctx.lineTo(points[i].x, points[i].y);
             }
             ctx.lineWidth = 20;
-            ctx.strokeStyle = 'var(--primary)';
+            ctx.strokeStyle = '#4facfe';
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
             ctx.stroke();
@@ -250,7 +250,7 @@
             ctx.beginPath();
             ctx.arc(cx, cy, currentRadius, 0, Math.PI*2);
             ctx.lineWidth = 15;
-            ctx.strokeStyle = 'var(--primary)';
+            ctx.strokeStyle = '#4facfe';
             ctx.stroke();
 
             currentRadius -= shrinkSpeed;

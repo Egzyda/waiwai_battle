@@ -8,6 +8,7 @@
     --danger: #ff6b6b;
     --success: #4ecdc4;
     --warning: #f5af19;
+    --warning-gradient: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
 }
 
 * {
@@ -77,10 +78,10 @@ body {
     flex-direction: column;
 }
 
-/* Backgrounds */
-#title-screen { background-image: url('img/bg/bg_title.png'); }
-#map-screen { background-image: url('img/bg/bg_map.png'); }
-#battle-screen { background-image: url('img/bg/bg_battle.png'); }
+/* Backgrounds (gradient shows through if the artwork is missing) */
+#title-screen { background-image: linear-gradient(180deg, #1a1c3a 0%, var(--bg-dark) 100%), url('img/bg/bg_title.png'); }
+#map-screen { background-image: linear-gradient(180deg, #14203a 0%, var(--bg-dark) 100%), url('img/bg/bg_map.png'); }
+#battle-screen { background-image: linear-gradient(180deg, #2a1830 0%, var(--bg-dark) 100%), url('img/bg/bg_battle.png'); }
 
 /* Title Screen */
 .title-logo {
@@ -239,10 +240,6 @@ body {
 }
 
 /* Battle Screen */
-#battle-screen {
-    display: flex;
-    flex-direction: column;
-}
 #enemy-area {
     flex: 2;
     display: flex;
@@ -304,7 +301,7 @@ body {
 .hissatsu-fill {
     position: absolute;
     top: 0; left: 0; height: 100%;
-    background: var(--secondary-gradient);
+    background: var(--warning-gradient);
     width: 0%;
     transition: width 0.3s;
     z-index: 1;
@@ -391,6 +388,10 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+}
+/* ミニゲーム・必殺技はうしろの戦闘画面が透けないよう不透明にする */
+#minigame-overlay, #hissatsu-overlay {
+    background: var(--bg-dark);
 }
 .modal-content {
     background: var(--bg-dark);
