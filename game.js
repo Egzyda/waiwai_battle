@@ -108,6 +108,65 @@ function rubyName(unit) {
     return `<ruby>${unit.name}<rt>${unit.reading}</rt></ruby>`;
 }
 
+// ダメージ数値のポップアップ（画面外まで飛んでいかず、その場で少しだけ動いて消える）
+function showDamagePopup(container, text, opts = {}) {
+    const pop = document.createElement('div');
+    pop.innerText = text;
+    pop.style.position = 'absolute';
+    pop.style.top = opts.top || '32%';
+    pop.style.left = '50%';
+    pop.style.fontSize = opts.fontSize || '48px';
+    pop.style.color = opts.color || 'white';
+    pop.style.textShadow = opts.textShadow || '0 0 10px red';
+    pop.style.fontWeight = '900';
+    pop.style.pointerEvents = 'none';
+    pop.style.zIndex = '40';
+    container.appendChild(pop);
+
+    const totalSteps = 34; // 約1秒表示
+    let progress = 0;
+    const anim = setInterval(() => {
+        progress++;
+        const drift = -progress * 0.9; // ほんの少しだけ上に動く程度に留める
+        const scale = 1 + progress * 0.004;
+        pop.style.transform = `translate(-50%, -50%) translateY(${drift}px) scale(${scale})`;
+        if(progress > totalSteps / 2) {
+            pop.style.opacity = 1 - (progress - totalSteps / 2) / (totalSteps / 2);
+        }
+        if(progress >= totalSteps) {
+            clearInterval(anim);
+            pop.remove();
+        }
+    }, 30);
+}
+
+// HPバーの減少をゆっくり見せる（本体バーの後ろに少し遅れて追いつく
+// トレイルバーを重ねることで、削れた量が分かりやすくなる）
+function updateHpBar(fillEl, trailEl, percent) {
+    const clamped = Math.max(0, Math.min(100, percent));
+    fillEl.style.width = clamped + '%';
+    if(trailEl) {
+        setTimeout(() => { trailEl.style.width = clamped + '%'; }, 250);
+    }
+}
+
+// ひっさつわざの演出（Cross Legendsの「スカイパンチ」＝画面反転＋シェイク＋
+// 光の十字バーストを流用したもの）
+function playSkyPunchEffect() {
+    const screen = document.getElementById('battle-screen');
+    screen.classList.add('void-invert', 'screen-shake');
+    setTimeout(() => screen.classList.remove('void-invert', 'screen-shake'), 600);
+
+    const enemyArea = document.getElementById('enemy-area');
+    const burst = document.createElement('div');
+    burst.className = 'vfx-sky-burst';
+    const cross = document.createElement('div');
+    cross.className = 'vfx-sky-cross';
+    enemyArea.appendChild(burst);
+    enemyArea.appendChild(cross);
+    setTimeout(() => { burst.remove(); cross.remove(); }, 1000);
+}
+
 // ==========================
 // 初期化・タイトル画面
 // ==========================
@@ -219,13 +278,20 @@ function initMap() {
         p.currentHp = p.hp;
     });
 
-    // 敵を事前に決定
+    // 敵を事前に決定（5ノードの中で同じ敵が重複しないようにする）
     generatedMapEnemies = [];
+    const usedEnemyIds = new Set();
     MAP_NODES.forEach(n => {
         let pool = ENEMIES.normal;
         if(n.type === 'elite') pool = ENEMIES.elite;
         if(n.type === 'boss') pool = ENEMIES.boss;
-        const enemy = JSON.parse(JSON.stringify(pool[Math.floor(Math.random() * pool.length)]));
+
+        const candidates = pool.filter(e => !usedEnemyIds.has(e.id));
+        const pickFrom = candidates.length > 0 ? candidates : pool; // 万一足りない時の保険
+        const base = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+        usedEnemyIds.add(base.id);
+
+        const enemy = JSON.parse(JSON.stringify(base));
         if(n.type === 'normal_hard') {
             // ノード3は同じザコ敵プールから少し強化して出す
             enemy.hp = Math.floor(enemy.hp * 1.4);
@@ -321,6 +387,7 @@ function renderBattle() {
             </div>
             <div class="enemy-name">${rubyName(e)}</div>
             <div class="hp-bar-bg" style="width: 250px; height: 20px; margin: 5px auto;">
+                <div class="hp-bar-trail" id="enemy-hp-trail" style="width:${(e.currentHp/e.maxHp)*100}%"></div>
                 <div class="hp-bar-fill" id="enemy-hp-fill" style="width:${(e.currentHp/e.maxHp)*100}%"></div>
             </div>
             <div class="hp-text" id="enemy-hp-text">${e.currentHp} / ${e.maxHp}</div>
@@ -338,6 +405,7 @@ function renderBattle() {
             <img src="img/${p.id}_face.png" class="ally-img" onerror="this.src='img/icon.png'">
             <div class="ally-name">${rubyName(p)}</div>
             <div class="hp-bar-bg">
+                <div class="hp-bar-trail" id="ally-hp-trail-${idx}" style="width:${(p.currentHp/p.hp)*100}%"></div>
                 <div class="hp-bar-fill" id="ally-hp-fill-${idx}" style="width:${(p.currentHp/p.hp)*100}%"></div>
             </div>
             <div class="hp-text" id="ally-hp-text-${idx}">${p.currentHp} / ${p.hp}</div>
@@ -480,32 +548,15 @@ async function executeAttack(ally, successRatio) {
     enemyImg.classList.add('flash');
     setTimeout(() => enemyImg.classList.remove('flash'), 300);
     
-    document.getElementById('enemy-hp-fill').style.width = (e.currentHp/e.maxHp)*100 + '%';
+    updateHpBar(
+        document.getElementById('enemy-hp-fill'),
+        document.getElementById('enemy-hp-trail'),
+        (e.currentHp/e.maxHp)*100
+    );
     document.getElementById('enemy-hp-text').innerText = `${e.currentHp} / ${e.maxHp}`;
-    
+
     // ダメージ数値ポップアップ
-    const dmgPop = document.createElement('div');
-    dmgPop.innerText = damage;
-    dmgPop.style.position = 'absolute';
-    dmgPop.style.top = '20%';
-    dmgPop.style.left = '50%';
-    dmgPop.style.transform = 'translate(-50%, -50%)';
-    dmgPop.style.fontSize = '48px';
-    dmgPop.style.color = 'white';
-    dmgPop.style.textShadow = '0 0 10px red';
-    dmgPop.style.fontWeight = '900';
-    document.getElementById('enemy-area').appendChild(dmgPop);
-    
-    let popY = 20;
-    let popAnim = setInterval(() => {
-        popY -= 1;
-        dmgPop.style.top = popY + '%';
-        dmgPop.style.opacity = popY / 20;
-        if(popY <= 0) {
-            clearInterval(popAnim);
-            dmgPop.remove();
-        }
-    }, 30);
+    showDamagePopup(document.getElementById('enemy-area'), damage, { top: '20%' });
 
     // 必殺技ゲージ増加
     const gaugeGain = (GameState.difficulty === 'child' ? 35 : 20) * multiplier;
@@ -540,9 +591,14 @@ async function startEnemyTurn() {
     const card = document.getElementById('ally-card-' + targetIdx);
     card.classList.add('shake');
     setTimeout(() => card.classList.remove('shake'), 400);
-    
-    document.getElementById('ally-hp-fill-' + targetIdx).style.width = (target.currentHp/target.hp)*100 + '%';
+
+    updateHpBar(
+        document.getElementById('ally-hp-fill-' + targetIdx),
+        document.getElementById('ally-hp-trail-' + targetIdx),
+        (target.currentHp/target.hp)*100
+    );
     document.getElementById('ally-hp-text-' + targetIdx).innerText = `${target.currentHp} / ${target.hp}`;
+    showDamagePopup(card, damage, { top: '0%', fontSize: '28px' });
     if(target.currentHp <= 0) {
         card.classList.add('dead');
     }
@@ -637,51 +693,29 @@ async function executeHissatsuDamage(successRatio) {
 
     document.getElementById('battle-log').innerText = 'ひっさつわざ！';
 
-    // スカイパンチ演出風の全画面フラッシュ
-    const flash = document.createElement('div');
-    flash.style.position = 'fixed';
-    flash.style.top = '0'; flash.style.left = '0';
-    flash.style.width = '100%'; flash.style.height = '100%';
-    flash.style.background = 'white';
-    flash.style.zIndex = '9999';
-    document.body.appendChild(flash);
-    
-    let op = 1;
-    let fade = setInterval(() => {
-        op -= 0.05;
-        flash.style.opacity = op;
-        if(op <= 0) {
-            clearInterval(fade);
-            flash.remove();
-        }
-    }, 50);
-
-    await sleep(500);
+    // スカイパンチ演出（Cross Legendsのキュアスカイ「ヒーローガールスカイパンチ」を流用）
+    playSkyPunchEffect();
+    await sleep(600);
 
     if(multiplier > 0) {
         const totalAtk = GameState.party.reduce((sum, p) => p.currentHp > 0 ? sum + p.attack : sum, 0);
         const damage = Math.floor(totalAtk * multiplier);
-        
+
         const e = GameState.currentEnemy;
         e.currentHp -= damage;
         if(e.currentHp < 0) e.currentHp = 0;
-        
-        document.getElementById('enemy-hp-fill').style.width = (e.currentHp/e.maxHp)*100 + '%';
+
+        updateHpBar(
+            document.getElementById('enemy-hp-fill'),
+            document.getElementById('enemy-hp-trail'),
+            (e.currentHp/e.maxHp)*100
+        );
         document.getElementById('enemy-hp-text').innerText = `${e.currentHp} / ${e.maxHp}`;
-        
-        const dmgPop = document.createElement('div');
-        dmgPop.innerText = damage;
-        dmgPop.style.position = 'absolute';
-        dmgPop.style.top = '20%';
-        dmgPop.style.left = '50%';
-        dmgPop.style.transform = 'translate(-50%, -50%)';
-        dmgPop.style.fontSize = '64px';
-        dmgPop.style.color = '#ff00ff';
-        dmgPop.style.textShadow = '0 0 20px white';
-        dmgPop.style.fontWeight = '900';
-        document.getElementById('enemy-area').appendChild(dmgPop);
-        setTimeout(() => dmgPop.remove(), 1000);
-        
+
+        showDamagePopup(document.getElementById('enemy-area'), damage, {
+            top: '20%', fontSize: '64px', color: '#ff00ff', textShadow: '0 0 20px white'
+        });
+
         document.getElementById('battle-enemy-img').classList.add('shake');
         setTimeout(() => document.getElementById('battle-enemy-img').classList.remove('shake'), 500);
     } else {

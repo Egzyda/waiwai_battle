@@ -45,10 +45,44 @@ const Minigames = {
     ],
     _timingIndex: 0,
 
+    // ひらがな学習で使う基本文字（清音のみ）
+    _hiragana: ['あ','い','う','え','お','か','き','く','け','こ','さ','し','す','せ','そ',
+        'た','ち','つ','て','と','な','に','ぬ','ね','の','は','ひ','ふ','へ','ほ',
+        'ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','を','ん'],
+    // 見た目が似ていて間違えやすい文字の組（おとなモードの意地悪な選択肢用）
+    _confusable: {
+        'ぬ':'め','め':'ぬ','わ':'ね','ね':'わ','れ':'わ','る':'ろ','ろ':'る',
+        'さ':'ち','ち':'さ','は':'ほ','ほ':'は','き':'さ','り':'い','い':'り',
+        'こ':'し','し':'こ','す':'む','む':'す','を':'お','お':'を','ま':'も','も':'ま'
+    },
+    _letterIndex: 0,
+
+    // ことばづくりで使う清音だけの単語（覚えやすいように絵文字つき）
+    _words: [
+        { word: 'いぬ', emoji: '🐶' },
+        { word: 'ねこ', emoji: '🐱' },
+        { word: 'とり', emoji: '🐦' },
+        { word: 'さかな', emoji: '🐟' },
+        { word: 'たこ', emoji: '🐙' },
+        { word: 'かに', emoji: '🦀' },
+        { word: 'きつね', emoji: '🦊' },
+        { word: 'すいか', emoji: '🍉' },
+        { word: 'つき', emoji: '🌙' },
+        { word: 'ほし', emoji: '⭐' },
+        { word: 'みず', emoji: '💧' },
+        { word: 'そら', emoji: '☁️' },
+        { word: 'くつ', emoji: '👞' },
+        { word: 'かさ', emoji: '☂️' },
+        { word: 'ふね', emoji: '🚢' }
+    ],
+    _wordIndex: 0,
+
     reset: function() {
         this._symbolIndex = 0;
         this._nazoriIndex = 0;
         this._timingIndex = 0;
+        this._letterIndex = 0;
+        this._wordIndex = 0;
     },
 
     nextSymbol: function() {
@@ -59,6 +93,12 @@ const Minigames = {
     },
     nextTimingShape: function() {
         return this._timingShapes[this._timingIndex % this._timingShapes.length];
+    },
+    nextLetter: function() {
+        return this._hiragana[this._letterIndex % this._hiragana.length];
+    },
+    nextWord: function() {
+        return this._words[this._wordIndex % this._words.length];
     },
 
     // ==========================
@@ -235,7 +275,7 @@ const Minigames = {
             stop();
             const ratio = tapped / total;
             self.showResult(container, ratio, 'すごい', 'おしい');
-            setTimeout(() => callback(ratio), 800);
+            setTimeout(() => callback(ratio), 1400);
         }
     },
 
@@ -375,7 +415,7 @@ const Minigames = {
             doneBtn.remove();
             const ratio = Math.min(1, coverage());
             self.showResult(container, ratio, 'すごい', 'もういっかい');
-            setTimeout(() => callback(ratio), 900);
+            setTimeout(() => callback(ratio), 1400);
         }
     },
 
@@ -448,7 +488,7 @@ const Minigames = {
             cancelAnimationFrame(req);
             container.removeEventListener('pointerdown', onTap);
             self.showResult(container, ratio, 'ぴったり', 'おしい');
-            setTimeout(() => callback(ratio), 900);
+            setTimeout(() => callback(ratio), 1400);
         }
     },
 
@@ -502,7 +542,7 @@ const Minigames = {
             btn.remove();
             const ratio = Math.min(1, taps / goal);
             self.showResult(container, ratio, 'すごい', 'おしい');
-            setTimeout(() => callback(ratio), 800);
+            setTimeout(() => callback(ratio), 1400);
         }
     },
 
@@ -594,7 +634,7 @@ const Minigames = {
             stop();
             const ratio = slashed / total;
             self.showResult(container, ratio, 'すごい', 'おしい');
-            setTimeout(() => callback(ratio), 800);
+            setTimeout(() => callback(ratio), 1400);
         }
     },
 
@@ -684,7 +724,171 @@ const Minigames = {
             holes.forEach(h => h.mole.classList.remove('up'));
             const ratio = hits / total;
             self.showResult(container, ratio, 'すごい', 'おしい');
-            setTimeout(() => callback(ratio), 800);
+            setTimeout(() => callback(ratio), 1400);
+        }
+    },
+
+    // ==========================
+    // 7. もじさがし（ひらがなを覚える）
+    // ==========================
+    startLetterFind: function(difficulty, container, callback) {
+        container.innerHTML = '';
+        const isChild = difficulty === 'child';
+        const timeLimit = isChild ? 12 : 6;
+        const total = isChild ? 9 : 12;
+        const matchCount = isChild ? 3 : 2;
+
+        const target = this._hiragana[this._letterIndex % this._hiragana.length];
+        this._letterIndex++;
+        let found = 0;
+
+        const info = this.makeInfo(container,
+            `<span style="font-size:0.6em;">この もじを さがそう</span><br>` +
+            `<span style="font-size:1.7em;">${target}</span>`);
+        info.style.top = '10px';
+
+        const playArea = document.createElement('div');
+        playArea.style.position = 'absolute';
+        playArea.style.top = '150px';
+        playArea.style.bottom = '60px';
+        playArea.style.left = '28px';
+        playArea.style.right = '28px';
+        container.appendChild(playArea);
+
+        // 残りの文字候補を作る（おとなモードは似た形の文字を混ぜて意地悪にする）
+        const others = this._hiragana.filter(c => c !== target);
+        let pool = [];
+        if (!isChild && this._confusable[target]) pool.push(this._confusable[target]);
+        while (pool.length < total - matchCount) {
+            const c = others[Math.floor(Math.random() * others.length)];
+            pool.push(c);
+        }
+        const letters = [target];
+        for (let i = 1; i < matchCount; i++) letters.push(target);
+        letters.push(...pool.slice(0, total - matchCount));
+        // シャッフル
+        for (let i = letters.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [letters[i], letters[j]] = [letters[j], letters[i]];
+        }
+
+        const SIZE = 62;
+        const positions = this.placeInGrid(letters.length, SIZE, playArea.clientWidth, playArea.clientHeight);
+        letters.forEach((ch, i) => {
+            const el = document.createElement('div');
+            el.className = 'mg-letter-tile';
+            el.innerText = ch;
+            el.style.left = positions[i].x + 'px';
+            el.style.top = positions[i].y + 'px';
+            el.addEventListener('pointerdown', () => {
+                if (!el.isConnected || ended) return;
+                if (ch === target) {
+                    el.remove();
+                    found++;
+                    if (found >= matchCount) end();
+                } else {
+                    el.classList.add('wrong');
+                    setTimeout(() => el.classList.remove('wrong'), 250);
+                }
+            });
+            playArea.appendChild(el);
+        });
+
+        const stop = this.startTimer(timeLimit, () => {}, () => end());
+
+        let ended = false;
+        const self = this;
+        function end() {
+            if (ended) return;
+            ended = true;
+            stop();
+            const ratio = Math.min(1, found / matchCount);
+            self.showResult(container, ratio, 'せいかい', 'おしい');
+            setTimeout(() => callback(ratio), 1400);
+        }
+    },
+
+    // ==========================
+    // 8. ことばづくり（かんたんな単語を覚える）
+    // ==========================
+    startWordBuild: function(difficulty, container, callback) {
+        container.innerHTML = '';
+        const isChild = difficulty === 'child';
+        const timeLimit = isChild ? 12 : 6;
+        const distractorCount = isChild ? 1 : 3;
+
+        const entry = this._words[this._wordIndex % this._words.length];
+        this._wordIndex++;
+        const wordChars = entry.word.split('');
+        let filled = 0;
+
+        const info = this.makeInfo(container,
+            `<span style="font-size:2em;">${entry.emoji}</span><br>` +
+            `<span id="mg-word-blanks" style="font-size:1.3em; letter-spacing:6px;">${'＿'.repeat(wordChars.length)}</span>`);
+        info.style.top = '20px';
+
+        const playArea = document.createElement('div');
+        playArea.style.position = 'absolute';
+        playArea.style.top = '150px';
+        playArea.style.bottom = '60px';
+        playArea.style.left = '28px';
+        playArea.style.right = '28px';
+        container.appendChild(playArea);
+
+        // 文字タイル：正解の文字(順番はシャッフル)＋おじゃまの文字
+        const tiles = wordChars.map(c => ({ ch: c, isCorrectSlot: true }));
+        const others = this._hiragana.filter(c => !wordChars.includes(c));
+        for (let i = 0; i < distractorCount; i++) {
+            tiles.push({ ch: others[Math.floor(Math.random() * others.length)], isCorrectSlot: false });
+        }
+        for (let i = tiles.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+        }
+
+        const SIZE = 64;
+        const positions = this.placeInGrid(tiles.length, SIZE, playArea.clientWidth, playArea.clientHeight);
+        let expectedIndex = 0;
+
+        function updateBlanks() {
+            const shown = wordChars.map((c, i) => i < filled ? c : '＿').join('');
+            const el = document.getElementById('mg-word-blanks');
+            if (el) el.innerText = shown;
+        }
+
+        tiles.forEach((tile, i) => {
+            const el = document.createElement('div');
+            el.className = 'mg-letter-tile';
+            el.innerText = tile.ch;
+            el.style.left = positions[i].x + 'px';
+            el.style.top = positions[i].y + 'px';
+            el.addEventListener('pointerdown', () => {
+                if (!el.isConnected || ended) return;
+                if (tile.ch === wordChars[expectedIndex]) {
+                    el.remove();
+                    filled++;
+                    expectedIndex++;
+                    updateBlanks();
+                    if (filled >= wordChars.length) end();
+                } else {
+                    el.classList.add('wrong');
+                    setTimeout(() => el.classList.remove('wrong'), 250);
+                }
+            });
+            playArea.appendChild(el);
+        });
+
+        const stop = this.startTimer(timeLimit, () => {}, () => end());
+
+        let ended = false;
+        const self = this;
+        function end() {
+            if (ended) return;
+            ended = true;
+            stop();
+            const ratio = Math.min(1, filled / wordChars.length);
+            self.showResult(container, ratio, 'せいかい', 'おしい');
+            setTimeout(() => callback(ratio), 1400);
         }
     }
 };
@@ -720,6 +924,16 @@ Minigames.list = [
         id: 'mogura',
         getTitle: () => `🐹 が でてきたら ${mgWord(MG_TAP)}`,
         start: (d, c, cb) => Minigames.startMogura(d, c, cb)
+    },
+    {
+        id: 'letter_find',
+        getTitle: () => `「${Minigames.nextLetter()}」の もじを さがそう`,
+        start: (d, c, cb) => Minigames.startLetterFind(d, c, cb)
+    },
+    {
+        id: 'word_build',
+        getTitle: () => `${Minigames.nextWord().emoji} の ことばを つくろう`,
+        start: (d, c, cb) => Minigames.startWordBuild(d, c, cb)
     }
 ];
 

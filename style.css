@@ -393,9 +393,20 @@ body {
     border: 1px solid #000;
 }
 .hp-bar-fill {
+    position: absolute;
+    top: 0; left: 0;
     height: 100%;
     background: var(--success);
-    transition: width 0.3s ease-out;
+    transition: width 0.6s ease-out;
+    z-index: 2;
+}
+.hp-bar-trail {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,90,90,0.9), rgba(255,180,90,0.7));
+    transition: width 0.9s ease-out;
+    z-index: 1;
 }
 .hp-text {
     font-size: 14px;
@@ -689,6 +700,30 @@ body {
     display: block;
     line-height: 1;
 }
+.mg-letter-tile {
+    position: absolute;
+    width: 62px;
+    height: 62px;
+    border-radius: 14px;
+    background: var(--primary-gradient);
+    border: 3px solid #fff;
+    color: #fff;
+    font-size: 30px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6), 0 0 14px rgba(79,172,254,0.7);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.mg-letter-tile.wrong {
+    animation: letterWrong 0.25s ease-out;
+}
+@keyframes letterWrong {
+    0%, 100% { transform: translateX(0); }
+    30% { transform: translateX(-6px); }
+    60% { transform: translateX(6px); }
+}
 .mg-hole {
     width: 100%;
     aspect-ratio: 1;
@@ -786,6 +821,67 @@ body {
 }
 .flash {
     animation: flash 0.3s;
+}
+
+/* ひっさつわざ「スカイパンチ」演出（Cross Legends流用） */
+.void-invert {
+    animation: void-flash 0.6s ease-in-out;
+}
+@keyframes void-flash {
+    0% { filter: invert(0); }
+    50% { filter: invert(1) hue-rotate(180deg); }
+    100% { filter: invert(0); }
+}
+.screen-shake {
+    animation: screen-shake-anim 0.3s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes screen-shake-anim {
+    10%, 90% { transform: translate3d(-2px, -1px, 0); }
+    20%, 80% { transform: translate3d(4px, 2px, 0); }
+    30%, 50%, 70% { transform: translate3d(-6px, -3px, 0); }
+    40%, 60% { transform: translate3d(6px, 3px, 0); }
+}
+.vfx-sky-burst {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, #fff 0%, #4facfe 30%, transparent 70%);
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    pointer-events: none;
+    z-index: 30;
+    animation: sky-burst-anim 1s cubic-bezier(.19,1,.22,1) forwards;
+}
+@keyframes sky-burst-anim {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; filter: brightness(5); }
+    10% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+    25% { transform: translate(-50%, -50%) scale(0.7); filter: brightness(3); }
+    50% { transform: translate(-50%, -50%) scale(3); opacity: 1; filter: brightness(2); }
+    100% { transform: translate(-50%, -50%) scale(4); opacity: 0; filter: brightness(1); }
+}
+.vfx-sky-cross {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 260px; height: 260px;
+    pointer-events: none;
+    z-index: 31;
+}
+.vfx-sky-cross::before,
+.vfx-sky-cross::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    background: #fff;
+    box-shadow: 0 0 30px #00f2fe, 0 0 60px #fff;
+    animation: sky-cross-anim 1s cubic-bezier(.19,1,.22,1) forwards;
+}
+.vfx-sky-cross::before { width: 260px; height: 2px; }
+.vfx-sky-cross::after { width: 2px; height: 260px; }
+@keyframes sky-cross-anim {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.8); }
+    45% { transform: translate(-50%, -50%) scale(1.6); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
 }
 
 /* ルビ(rt)を通常の行の流れから外し、絶対配置にする。
