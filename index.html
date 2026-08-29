@@ -11,10 +11,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
+    <script>
+        // 横向きにされても警告を出さず、CSSで縦向きの見た目のまま回転表示させる
+        (function() {
+            function update() {
+                const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+                const html = document.documentElement;
+                html.classList.toggle('force-portrait', isLandscape);
+                if (!isLandscape) return;
+                let angle = 0;
+                if (screen.orientation && typeof screen.orientation.angle === 'number') {
+                    angle = screen.orientation.angle;
+                } else if (typeof window.orientation === 'number') {
+                    angle = window.orientation;
+                }
+                html.classList.toggle('rotate-cw', angle === 90 || angle === -270);
+            }
+            update();
+            window.addEventListener('resize', update);
+            window.addEventListener('orientationchange', update);
+        })();
+    </script>
 </head>
 <body>
-    <div id="orientation-warning">たてにしてください</div>
-    
     <div id="game-container">
         <!-- タイトル画面 -->
         <div id="title-screen" class="screen active">
