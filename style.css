@@ -227,7 +227,7 @@ body {
     font-size: 12px;
     font-weight: 700;
     text-align: center;
-    padding: 13px 2px 4px;
+    padding: 5px 2px 4px;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -338,7 +338,6 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding-top: 8px;
 }
 
 /* Battle Screen */
@@ -378,7 +377,7 @@ body {
     font-size: clamp(16px, 5vw, 22px);
     font-size: clamp(16px, 5cqw, 28px);
     font-weight: 900;
-    margin-top: 16px;
+    margin-top: 8px;
     text-shadow: 1px 2px 4px #000;
     white-space: nowrap;
 }
@@ -466,7 +465,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 14px 16px 6px;
+    padding: 6px 16px;
     word-break: keep-all;
     background: rgba(0,0,0,0.4);
 }
@@ -501,7 +500,6 @@ body {
     font-size: 11px;
     font-weight: 700;
     margin-top: 4px;
-    padding-top: 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -573,7 +571,6 @@ body {
     font-size: clamp(18px, 6vw, 24px);
     font-size: clamp(18px, 6cqw, 30px);
     font-weight: 900;
-    margin-top: 14px;
     margin-bottom: 20px;
     word-break: keep-all;
 }
@@ -605,7 +602,7 @@ body {
     font-size: clamp(22px, 7.2vw, 30px);
     font-size: clamp(22px, 7.2cqw, 38px);
     margin-bottom: 30px;
-    padding: 20px 20px 0;
+    padding: 0 20px;
     color: #fff;
     text-shadow: 0 2px 10px #000;
     word-break: keep-all;
@@ -763,7 +760,7 @@ body {
     font-size: clamp(22px, 6.5cqw, 32px);
     font-weight: 900;
     text-align: center;
-    padding: 20px 20px 0;
+    padding: 0 20px;
     margin-bottom: 16px;
     text-shadow: 0 2px 8px #000;
     word-break: keep-all;
@@ -884,24 +881,10 @@ body {
     100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
 }
 
-/* ルビ(rt)を通常の行の流れから外し、絶対配置にする。
-   これにより「ルビがある文字とない文字が混ざると、ルビの分だけ
-   行の高さが変わってベースラインがずれる」問題を解消する
-   （ルビの有無に関わらず、どの行も同じ高さになる） */
-ruby {
-    position: relative;
-}
-rt {
-    position: absolute;
-    top: -0.95em;
-    left: 50%;
-    transform: translateX(-50%);
+ruby rt {
     font-size: 0.55em;
     font-weight: 400;
-    line-height: 1;
     color: rgba(255,255,255,0.7);
-    white-space: nowrap;
-    pointer-events: none;
 }
 
 /* Toast */
