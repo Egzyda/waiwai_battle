@@ -1,16 +1,16 @@
 const CHARACTERS = {
     // === ラブライブ ===
-    keke: { id: 'keke', name: '唐可可', reading: 'たん・けーき', type: 'tank', hp: 220, attack: 70 },
+    keke: { id: 'keke', name: '唐可可', reading: 'たんくうくう', type: 'tank', hp: 220, attack: 70 },
     ceras: { id: 'ceras', name: 'セラス', reading: 'せらす', type: 'healer', hp: 230, attack: 95 },
     yoshiko: { id: 'yoshiko', name: '津島善子', reading: 'つしま よしこ', type: 'debuffer', hp: 160, attack: 125 },
     shiki: { id: 'shiki', name: '若菜四季', reading: 'わかな しき', type: 'support', hp: 210, attack: 95 },
     setsuna: { id: 'setsuna', name: '優木せつ菜', reading: 'ゆうき せつな', type: 'magic_attacker', hp: 130, attack: 150 },
-    shizuku: { id: 'shizuku', name: '桜坂しずく', reading: 'さくらざか しずく', type: 'debuffer', hp: 180, attack: 100 },
+    shizuku: { id: 'shizuku', name: '桜坂しずく', reading: 'おうさかしずく', type: 'debuffer', hp: 180, attack: 100 },
     mari: { id: 'mari', name: 'マリ', reading: 'まり', type: 'tank', hp: 215, attack: 120 },
     kaho: { id: 'kaho', name: '日野下花帆', reading: 'ひのした かほ', type: 'healer', hp: 245, attack: 70 },
     hanamaru: { id: 'hanamaru', name: '国木田花丸', reading: 'くにきだ はなまる', type: 'support', hp: 200, attack: 100 },
     margarete: { id: 'margarete', name: 'マルガレーテ', reading: 'まるがれーて', type: 'magic_attacker', hp: 125, attack: 160 },
-    sumire: { id: 'sumire', name: '平安名すみれ', reading: 'へいあんな すみれ', type: 'debuffer', hp: 150, attack: 145 },
+    sumire: { id: 'sumire', name: '平安名すみれ', reading: 'へあんな すみれ', type: 'debuffer', hp: 150, attack: 145 },
 
     // === プリキュア ===
     sky: { id: 'sky', name: 'キュアスカイ', reading: 'きゅあすかい', type: 'physical_attacker', hp: 130, attack: 150 },

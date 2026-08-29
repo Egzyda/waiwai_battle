@@ -44,6 +44,42 @@ function closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
 }
 
+// おとなモードに切り替える前に計算問題を出す（子どもが誤って切り替えられないように）
+function askMathChallenge(onCorrect) {
+    const a = Math.floor(Math.random() * 8) + 2; // 2〜9
+    const b = Math.floor(Math.random() * 8) + 2;
+    const answer = a * b;
+
+    const modal = document.getElementById('modal-overlay');
+    const modalText = document.getElementById('modal-text');
+    const modalBtnContainer = document.getElementById('modal-buttons');
+
+    modalText.innerHTML = `おとな<ruby>モード<rt>もーど</rt></ruby>に する けいさん<br>${a} × ${b} = ?`;
+    modalBtnContainer.innerHTML = '';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'math-input';
+    input.inputMode = 'numeric';
+
+    const okBtn = document.createElement('button');
+    okBtn.className = 'btn-primary';
+    okBtn.innerText = 'けってい';
+    okBtn.onclick = () => {
+        closeModal();
+        if(parseInt(input.value, 10) === answer) {
+            onCorrect();
+        } else {
+            showToast('ざんねん、こたえが ちがうよ');
+        }
+    };
+
+    modalBtnContainer.appendChild(input);
+    modalBtnContainer.appendChild(okBtn);
+    modal.classList.remove('hidden');
+    input.focus();
+}
+
 function showToast(text) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -80,8 +116,11 @@ function initTitle() {
     const diffBtn = document.getElementById('difficulty-btn');
     diffBtn.onclick = () => {
         if(GameState.difficulty === 'child') {
-            GameState.difficulty = 'adult';
-            diffBtn.innerHTML = 'おとな<ruby>モード<rt>もーど</rt></ruby>';
+            // おとなモードへの切り替えは計算問題に正解した時だけ
+            askMathChallenge(() => {
+                GameState.difficulty = 'adult';
+                diffBtn.innerHTML = 'おとな<ruby>モード<rt>もーど</rt></ruby>';
+            });
         } else {
             GameState.difficulty = 'child';
             diffBtn.innerHTML = 'こども<ruby>モード<rt>もーど</rt></ruby>';
@@ -118,15 +157,9 @@ function initCharacterSelect() {
         char.minigame = mgTypes[idx % 3];
         idx++;
 
-        let mgIcon = '';
-        if(char.minigame === 'renda') mgIcon = '⭐';
-        if(char.minigame === 'nazori') mgIcon = '✍️';
-        if(char.minigame === 'timing') mgIcon = '⭕';
-
         card.innerHTML = `
             <div class="char-thumb">
                 <img src="img/${char.id}_face.png" alt="${char.name}" onerror="this.src='img/icon.png'">
-                <div class="char-minigame-icon">${mgIcon}</div>
                 <div class="char-stats-adult ${GameState.difficulty === 'adult' ? 'visible' : ''}">
                     HP:${char.hp} 攻:${char.attack}
                 </div>
@@ -207,6 +240,9 @@ function renderMap() {
     map.innerHTML = '';
 
     for(let i=0; i<MAP_NODES.length; i++) {
+        const wrap = document.createElement('div');
+        wrap.className = 'map-node-wrap';
+
         const nodeDiv = document.createElement('div');
         nodeDiv.className = 'map-node';
         if(i < GameState.currentNode) nodeDiv.classList.add('cleared');
@@ -214,13 +250,21 @@ function renderMap() {
 
         const enemy = generatedMapEnemies[i];
         nodeDiv.innerHTML = `<img src="img/enemy/${enemy.id}.png" onerror="this.src='img/icon.png'">`;
+        wrap.appendChild(nodeDiv);
+
+        if(i === GameState.currentNode) {
+            const callout = document.createElement('div');
+            callout.className = 'map-node-callout';
+            callout.innerText = 'タップして しょうぶ！';
+            wrap.appendChild(callout);
+        }
 
         nodeDiv.onclick = () => {
             if(i === GameState.currentNode) {
                 startBattle(enemy);
             }
         };
-        map.appendChild(nodeDiv);
+        map.appendChild(wrap);
     }
     
     renderPartyStatusBar();
@@ -519,26 +563,31 @@ function startHissatsu() {
     let currentExpected = 1;
     const totalNumbers = 10;
     let successCount = 0;
+    const SIZE = 76; // 数字まるの直径
+    const MARGIN = 24; // 画面端すぎる位置に出ないようにする安全マージン
 
     for(let i=1; i<=totalNumbers; i++) {
         const btn = document.createElement('div');
         btn.innerText = i;
         btn.style.position = 'absolute';
-        btn.style.width = '60px';
-        btn.style.height = '60px';
-        btn.style.background = 'var(--primary-gradient)';
+        btn.style.width = SIZE + 'px';
+        btn.style.height = SIZE + 'px';
+        btn.style.background = 'var(--warning-gradient)';
+        btn.style.border = '3px solid #fff';
         btn.style.borderRadius = '50%';
         btn.style.display = 'flex';
         btn.style.alignItems = 'center';
         btn.style.justifyContent = 'center';
-        btn.style.fontSize = '32px';
+        btn.style.fontSize = '38px';
         btn.style.fontWeight = 'bold';
         btn.style.color = 'white';
-        btn.style.boxShadow = '0 4px 10px black';
-        
-        btn.style.left = Math.random() * (window.innerWidth - 80) + 'px';
-        btn.style.top = Math.random() * (window.innerHeight * 0.7 - 80) + 'px';
-        
+        btn.style.boxShadow = '0 4px 10px black, 0 0 18px rgba(245,175,25,0.9)';
+
+        const areaW = Math.max(0, playArea.clientWidth - SIZE - MARGIN * 2);
+        const areaH = Math.max(0, playArea.clientHeight - SIZE - MARGIN * 2);
+        btn.style.left = (MARGIN + Math.random() * areaW) + 'px';
+        btn.style.top = (MARGIN + Math.random() * areaH) + 'px';
+
         btn.addEventListener('pointerdown', () => {
             if(i === currentExpected) {
                 // 正解
