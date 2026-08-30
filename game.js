@@ -157,13 +157,15 @@ function playSkyPunchEffect() {
     screen.classList.add('void-invert', 'screen-shake');
     setTimeout(() => screen.classList.remove('void-invert', 'screen-shake'), 600);
 
-    const enemyArea = document.getElementById('enemy-area');
+    // #enemy-areaは下寄せなので、敵の画像そのもの(.enemy-frame)を
+    // 基準にしないと中心がずれてしまう
+    const enemyFrame = document.querySelector('.enemy-frame') || document.getElementById('enemy-area');
     const burst = document.createElement('div');
     burst.className = 'vfx-sky-burst';
     const cross = document.createElement('div');
     cross.className = 'vfx-sky-cross';
-    enemyArea.appendChild(burst);
-    enemyArea.appendChild(cross);
+    enemyFrame.appendChild(burst);
+    enemyFrame.appendChild(cross);
     setTimeout(() => { burst.remove(); cross.remove(); }, 1000);
 }
 

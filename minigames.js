@@ -57,23 +57,134 @@ const Minigames = {
     },
     _letterIndex: 0,
 
-    // ことばづくりで使う清音だけの単語（覚えやすいように絵文字つき）
+    // ことばづくりで使う単語（覚えやすいように絵文字つき）
+    // 知育ねらいで2〜4文字までいろいろな長さをまぜてある
     _words: [
+        // どうぶつ
         { word: 'いぬ', emoji: '🐶' },
         { word: 'ねこ', emoji: '🐱' },
         { word: 'とり', emoji: '🐦' },
+        { word: 'うし', emoji: '🐮' },
+        { word: 'うま', emoji: '🐴' },
+        { word: 'ぶた', emoji: '🐷' },
+        { word: 'くま', emoji: '🐻' },
+        { word: 'とら', emoji: '🐯' },
+        { word: 'さる', emoji: '🐵' },
+        { word: 'ぞう', emoji: '🐘' },
+        { word: 'かめ', emoji: '🐢' },
+        { word: 'へび', emoji: '🐍' },
+        { word: 'ひつじ', emoji: '🐑' },
+        { word: 'ぱんだ', emoji: '🐼' },
+        { word: 'きつね', emoji: '🦊' },
+        { word: 'たぬき', emoji: '🦝' },
+        { word: 'うさぎ', emoji: '🐰' },
+        { word: 'らいおん', emoji: '🦁' },
+        { word: 'ことり', emoji: '🐤' },
+        { word: 'あひる', emoji: '🦆' },
+        { word: 'ふくろう', emoji: '🦉' },
+        { word: 'かえる', emoji: '🐸' },
+        { word: 'ぺんぎん', emoji: '🐧' },
+        { word: 'こあら', emoji: '🐨' },
+        // すいちゅう
         { word: 'さかな', emoji: '🐟' },
         { word: 'たこ', emoji: '🐙' },
         { word: 'かに', emoji: '🦀' },
-        { word: 'きつね', emoji: '🦊' },
+        { word: 'えび', emoji: '🦐' },
+        { word: 'いか', emoji: '🦑' },
+        { word: 'くじら', emoji: '🐳' },
+        { word: 'いるか', emoji: '🐬' },
+        // むし
+        { word: 'あり', emoji: '🐜' },
+        { word: 'はち', emoji: '🐝' },
+        { word: 'ちょう', emoji: '🦋' },
+        { word: 'せみ', emoji: '🦗' },
+        { word: 'かたつむり', emoji: '🐌' },
+        // たべもの
         { word: 'すいか', emoji: '🍉' },
+        { word: 'りんご', emoji: '🍎' },
+        { word: 'ばなな', emoji: '🍌' },
+        { word: 'いちご', emoji: '🍓' },
+        { word: 'ぶどう', emoji: '🍇' },
+        { word: 'もも', emoji: '🍑' },
+        { word: 'めろん', emoji: '🍈' },
+        { word: 'れもん', emoji: '🍋' },
+        { word: 'ぱん', emoji: '🍞' },
+        { word: 'おにぎり', emoji: '🍙' },
+        { word: 'らーめん', emoji: '🍜' },
+        { word: 'けーき', emoji: '🍰' },
+        { word: 'あめ', emoji: '🍬' },
+        { word: 'ちょこ', emoji: '🍫' },
+        { word: 'あいす', emoji: '🍦' },
+        { word: 'たまご', emoji: '🥚' },
+        { word: 'にんじん', emoji: '🥕' },
+        { word: 'とまと', emoji: '🍅' },
+        { word: 'おちゃ', emoji: '🍵' },
+        { word: 'ぎゅうにゅう', emoji: '🥛' },
+        // しぜん・てんき
         { word: 'つき', emoji: '🌙' },
         { word: 'ほし', emoji: '⭐' },
-        { word: 'みず', emoji: '💧' },
+        { word: 'たいよう', emoji: '☀️' },
         { word: 'そら', emoji: '☁️' },
+        { word: 'あめ', emoji: '☔' },
+        { word: 'ゆき', emoji: '❄️' },
+        { word: 'にじ', emoji: '🌈' },
+        { word: 'かみなり', emoji: '⚡' },
+        { word: 'やま', emoji: '⛰️' },
+        { word: 'うみ', emoji: '🌊' },
+        { word: 'かわ', emoji: '🏞️' },
+        { word: 'き', emoji: '🌳' },
+        { word: 'はな', emoji: '🌸' },
+        { word: 'は', emoji: '🍃' },
+        { word: 'みず', emoji: '💧' },
+        { word: 'ひ', emoji: '🔥' },
+        // みのまわり
         { word: 'くつ', emoji: '👞' },
         { word: 'かさ', emoji: '☂️' },
-        { word: 'ふね', emoji: '🚢' }
+        { word: 'ふね', emoji: '🚢' },
+        { word: 'くるま', emoji: '🚗' },
+        { word: 'でんしゃ', emoji: '🚃' },
+        { word: 'ひこうき', emoji: '✈️' },
+        { word: 'じてんしゃ', emoji: '🚲' },
+        { word: 'ばす', emoji: '🚌' },
+        { word: 'ぼうし', emoji: '👒' },
+        { word: 'ふく', emoji: '👕' },
+        { word: 'かばん', emoji: '🎒' },
+        { word: 'めがね', emoji: '👓' },
+        { word: 'とけい', emoji: '⏰' },
+        { word: 'ほん', emoji: '📖' },
+        { word: 'えんぴつ', emoji: '✏️' },
+        { word: 'はさみ', emoji: '✂️' },
+        { word: 'いす', emoji: '🪑' },
+        { word: 'つくえ', emoji: '💺' },
+        { word: 'いえ', emoji: '🏠' },
+        { word: 'かぎ', emoji: '🔑' },
+        { word: 'でんわ', emoji: '☎️' },
+        { word: 'ぼーる', emoji: '⚽' },
+        { word: 'ふうせん', emoji: '🎈' },
+        { word: 'つみき', emoji: '🧱' },
+        { word: 'たいこ', emoji: '🥁' },
+        { word: 'ぴあの', emoji: '🎹' },
+        // からだ
+        { word: 'め', emoji: '👀' },
+        { word: 'みみ', emoji: '👂' },
+        { word: 'はな', emoji: '👃' },
+        { word: 'くち', emoji: '👄' },
+        { word: 'て', emoji: '✋' },
+        { word: 'あし', emoji: '🦶' },
+        // かぞく
+        { word: 'ぱぱ', emoji: '👨' },
+        { word: 'まま', emoji: '👩' },
+        { word: 'あかちゃん', emoji: '👶' },
+        { word: 'おじいちゃん', emoji: '👴' },
+        { word: 'おばあちゃん', emoji: '👵' },
+        // いろ・かたち
+        { word: 'あか', emoji: '🔴' },
+        { word: 'あお', emoji: '🔵' },
+        { word: 'きいろ', emoji: '🟡' },
+        { word: 'みどり', emoji: '🟢' },
+        { word: 'しろ', emoji: '⚪' },
+        { word: 'くろ', emoji: '⚫' },
+        { word: 'はーと', emoji: '❤️' }
     ],
     _wordIndex: 0,
 
@@ -273,6 +384,7 @@ const Minigames = {
             if (ended) return;
             ended = true;
             stop();
+            playArea.remove(); // 残っている記号を結果表示の裏に残さない
             const ratio = tapped / total;
             self.showResult(container, ratio, 'すごい', 'おしい');
             setTimeout(() => callback(ratio), 1400);
@@ -577,31 +689,37 @@ const Minigames = {
             el.className = 'mg-slash-target';
             el.style.left = positions[i].x + 'px';
             el.style.top = positions[i].y + 'px';
-            el.innerHTML = `<span class="mg-arrow-glyph" style="transform:rotate(${Math.floor(Math.random() * 4) * 45}deg)">➤</span>`;
+            const angle = Math.floor(Math.random() * 4) * 45;
+            el.innerHTML = `<span class="mg-arrow-glyph" style="transform:rotate(${angle}deg)">➤</span>`;
             playArea.appendChild(el);
-            targets.push({ el, done: false });
+            targets.push({ el, done: false, angle });
         }
 
-        function checkAt(clientX, clientY) {
+        // 矢印の向きに沿ってスワイプした時だけ判定する（軸は両方向OK）
+        function angle180(a) { a = ((a % 180) + 180) % 180; return a; }
+        function checkAt(clientX, clientY, moveAngleDeg) {
             for (const t of targets) {
                 if (t.done) continue;
                 const r = t.el.getBoundingClientRect();
                 const dx = (r.left + r.width / 2) - clientX;
                 const dy = (r.top + r.height / 2) - clientY;
-                if (Math.hypot(dx, dy) <= hitRadius) {
-                    t.done = true;
-                    t.el.classList.add('slashed');
-                    slashed++;
-                    const s = info.querySelector('#mg-score-sl');
-                    if (s) s.innerText = slashed + ' / ' + total;
-                    if (slashed >= total) end();
-                }
+                if (Math.hypot(dx, dy) > hitRadius) continue;
+                let diff = Math.abs(angle180(moveAngleDeg) - angle180(t.angle));
+                if (diff > 90) diff = 180 - diff;
+                if (diff > ANGLE_TOLERANCE) continue;
+                t.done = true;
+                t.el.classList.add('slashed');
+                slashed++;
+                const s = info.querySelector('#mg-score-sl');
+                if (s) s.innerText = slashed + ' / ' + total;
+                if (slashed >= total) end();
             }
         }
 
         // タップだけでクリアできないよう、実際に指を動かした距離が
         // 一定を超えてから初めて判定を始める
         const SWIPE_THRESHOLD = 24;
+        const ANGLE_TOLERANCE = 28; // 矢印の向きからのずれの許容度(度)
         let swiping = false;
         let lastX = 0, lastY = 0, swipedDist = 0;
         playArea.addEventListener('pointerdown', (e) => {
@@ -613,10 +731,15 @@ const Minigames = {
         });
         playArea.addEventListener('pointermove', (e) => {
             if (!swiping) return;
-            swipedDist += Math.hypot(e.clientX - lastX, e.clientY - lastY);
+            const moveDx = e.clientX - lastX;
+            const moveDy = e.clientY - lastY;
+            swipedDist += Math.hypot(moveDx, moveDy);
             lastX = e.clientX;
             lastY = e.clientY;
-            if (swipedDist >= SWIPE_THRESHOLD) checkAt(e.clientX, e.clientY);
+            if (swipedDist >= SWIPE_THRESHOLD && (moveDx !== 0 || moveDy !== 0)) {
+                const moveAngle = Math.atan2(moveDy, moveDx) * 180 / Math.PI;
+                checkAt(e.clientX, e.clientY, moveAngle);
+            }
         });
         playArea.addEventListener('pointerup', () => { swiping = false; });
         playArea.addEventListener('pointercancel', () => { swiping = false; });
@@ -632,6 +755,7 @@ const Minigames = {
             if (ended) return;
             ended = true;
             stop();
+            playArea.remove(); // 残っている的を結果表示の裏に残さない
             const ratio = slashed / total;
             self.showResult(container, ratio, 'すごい', 'おしい');
             setTimeout(() => callback(ratio), 1400);
@@ -721,7 +845,7 @@ const Minigames = {
             if (ended) return;
             ended = true;
             if (timeoutId) clearTimeout(timeoutId);
-            holes.forEach(h => h.mole.classList.remove('up'));
+            playArea.remove(); // アニメーション中のもぐら・エフェクトを結果表示の裏に残さない
             const ratio = hits / total;
             self.showResult(container, ratio, 'すごい', 'おしい');
             setTimeout(() => callback(ratio), 1400);
@@ -802,6 +926,7 @@ const Minigames = {
             if (ended) return;
             ended = true;
             stop();
+            playArea.remove();
             const ratio = Math.min(1, found / matchCount);
             self.showResult(container, ratio, 'せいかい', 'おしい');
             setTimeout(() => callback(ratio), 1400);
@@ -814,8 +939,8 @@ const Minigames = {
     startWordBuild: function(difficulty, container, callback) {
         container.innerHTML = '';
         const isChild = difficulty === 'child';
-        const timeLimit = isChild ? 12 : 6;
-        const distractorCount = isChild ? 1 : 3;
+        const timeLimit = isChild ? 16 : 10;
+        const distractorCount = isChild ? 5 : 7;
 
         const entry = this._words[this._wordIndex % this._words.length];
         this._wordIndex++;
@@ -886,6 +1011,7 @@ const Minigames = {
             if (ended) return;
             ended = true;
             stop();
+            playArea.remove();
             const ratio = Math.min(1, filled / wordChars.length);
             self.showResult(container, ratio, 'せいかい', 'おしい');
             setTimeout(() => callback(ratio), 1400);
@@ -1055,27 +1181,33 @@ const HissatsuGames = {
             el.className = 'hs-combo';
             el.style.left = positions[i].x + 'px';
             el.style.top = positions[i].y + 'px';
-            el.innerHTML = `<span class="mg-arrow-glyph" style="transform:rotate(${Math.floor(Math.random() * 4) * 45}deg)">➤</span>`;
+            const angle = Math.floor(Math.random() * 4) * 45;
+            el.innerHTML = `<span class="mg-arrow-glyph" style="transform:rotate(${angle}deg)">➤</span>`;
             playArea.appendChild(el);
-            targets.push({ el, done: false });
+            targets.push({ el, done: false, angle });
         }
 
-        function checkAt(x, y) {
+        // 矢印の向きに沿ってスワイプした時だけ判定する（軸は両方向OK）
+        function angle180(a) { a = ((a % 180) + 180) % 180; return a; }
+        function checkAt(x, y, moveAngleDeg) {
             for (const t of targets) {
                 if (t.done) continue;
                 const r = t.el.getBoundingClientRect();
-                if (Math.hypot((r.left + r.width / 2) - x, (r.top + r.height / 2) - y) <= hitRadius) {
-                    t.done = true;
-                    t.el.classList.add('slashed');
-                    slashed++;
-                    if (slashed >= total) end();
-                }
+                if (Math.hypot((r.left + r.width / 2) - x, (r.top + r.height / 2) - y) > hitRadius) continue;
+                let diff = Math.abs(angle180(moveAngleDeg) - angle180(t.angle));
+                if (diff > 90) diff = 180 - diff;
+                if (diff > ANGLE_TOLERANCE) continue;
+                t.done = true;
+                t.el.classList.add('slashed');
+                slashed++;
+                if (slashed >= total) end();
             }
         }
 
         // タップだけでクリアできないよう、実際に指を動かした距離が
         // 一定を超えてから初めて判定を始める
         const SWIPE_THRESHOLD = 24;
+        const ANGLE_TOLERANCE = 28; // 矢印の向きからのずれの許容度(度)
         let swiping = false;
         let lastX = 0, lastY = 0, swipedDist = 0;
         playArea.addEventListener('pointerdown', (e) => {
@@ -1087,10 +1219,15 @@ const HissatsuGames = {
         });
         playArea.addEventListener('pointermove', (e) => {
             if (!swiping) return;
-            swipedDist += Math.hypot(e.clientX - lastX, e.clientY - lastY);
+            const moveDx = e.clientX - lastX;
+            const moveDy = e.clientY - lastY;
+            swipedDist += Math.hypot(moveDx, moveDy);
             lastX = e.clientX;
             lastY = e.clientY;
-            if (swipedDist >= SWIPE_THRESHOLD) checkAt(e.clientX, e.clientY);
+            if (swipedDist >= SWIPE_THRESHOLD && (moveDx !== 0 || moveDy !== 0)) {
+                const moveAngle = Math.atan2(moveDy, moveDx) * 180 / Math.PI;
+                checkAt(e.clientX, e.clientY, moveAngle);
+            }
         });
         playArea.addEventListener('pointerup', () => { swiping = false; });
 
