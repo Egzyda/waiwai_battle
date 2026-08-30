@@ -249,8 +249,8 @@ const Minigames = {
         return positions;
     },
 
-    // 結果テキストを出して終わる
-    showResult: function(container, ratio, goodText, badText) {
+    // 好きな文言・色で結果テキストを出す（ひっさつわざの成功表示などでも共用）
+    showResultText: function(container, text, color) {
         const fb = document.createElement('div');
         fb.style.position = 'absolute';
         fb.style.top = '50%';
@@ -260,10 +260,17 @@ const Minigames = {
         fb.style.fontWeight = '900';
         fb.style.whiteSpace = 'nowrap';
         fb.style.zIndex = '50';
-        fb.style.color = ratio >= 0.7 ? 'var(--success)' : 'var(--danger)';
+        fb.style.color = color;
         fb.style.textShadow = '0 2px 10px #000';
-        fb.innerText = ratio >= 0.7 ? goodText : badText;
+        fb.innerText = text;
         container.appendChild(fb);
+        return fb;
+    },
+
+    // 結果テキストを出して終わる
+    showResult: function(container, ratio, goodText, badText) {
+        const good = ratio >= 0.7;
+        return this.showResultText(container, good ? goodText : badText, good ? 'var(--success)' : 'var(--danger)');
     },
 
     // のこり時間などの見出し
@@ -332,7 +339,7 @@ const Minigames = {
     startCollect: function(difficulty, container, callback) {
         container.innerHTML = '';
         const isChild = difficulty === 'child';
-        const timeLimit = isChild ? 10 : 2.5;
+        const timeLimit = isChild ? 10 : 3.5;
         const total = 10;
         let tapped = 0;
 
@@ -610,8 +617,10 @@ const Minigames = {
     startRenda: function(difficulty, container, callback) {
         container.innerHTML = '';
         const isChild = difficulty === 'child';
-        const timeLimit = isChild ? 5 : 4;
-        const goal = isChild ? 18 : 60;
+        const timeLimit = isChild ? 5 : 4.5;
+        // おとなモードは「激ムズ」ではあるが人間が実際に押しきれる速さにする
+        // (以前は60回/4秒=毎秒15回で理論上到達不可能だった)
+        const goal = isChild ? 18 : 34;
         let taps = 0;
 
         const info = this.makeInfo(container,
@@ -1170,7 +1179,7 @@ const HissatsuGames = {
         const total = 10;
         const SIZE = 74;
         const hitRadius = difficulty === 'child' ? 54 : 28;
-        const timeLimit = difficulty === 'child' ? 5000 : 2200;
+        const timeLimit = difficulty === 'child' ? 5000 : 3000;
         let slashed = 0;
 
         playArea.style.touchAction = 'none';
@@ -1244,7 +1253,7 @@ const HissatsuGames = {
 };
 
 HissatsuGames.list = [
-    { id: 'numbers', start: HissatsuGames.startNumbers },
-    { id: 'rush', start: HissatsuGames.startRush },
-    { id: 'combo', start: HissatsuGames.startCombo }
+    { id: 'numbers', getTitle: () => '1から10まで じゅんばんに おそう', start: HissatsuGames.startNumbers },
+    { id: 'rush', getTitle: () => 'ひかったら すぐ おそう', start: HissatsuGames.startRush },
+    { id: 'combo', getTitle: () => 'ゆびで なぞって きりさこう', start: HissatsuGames.startCombo }
 ];

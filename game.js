@@ -645,6 +645,15 @@ async function winBattle() {
 // ==========================
 // 必殺技
 // ==========================
+// 成功度(0〜1)からダメージ倍率・結果表示の文言と色をまとめて決める
+function hissatsuResultInfo(ratio) {
+    if (ratio >= 0.999) return { multiplier: 6, text: 'だいせいこう', color: 'var(--warning)' };
+    if (ratio >= 0.7) return { multiplier: 4, text: 'せいこう', color: 'var(--success)' };
+    if (ratio >= 0.4) return { multiplier: 2.5, text: 'せいこう', color: 'var(--success)' };
+    if (ratio > 0) return { multiplier: 1.5, text: 'ぎりぎり せいこう', color: 'var(--success)' };
+    return { multiplier: 0, text: 'しっぱい…', color: 'var(--danger)' };
+}
+
 function startHissatsu() {
     GameState.hissatsuGauge = 0;
     updateHissatsuGauge();
@@ -653,45 +662,55 @@ function startHissatsu() {
     overlay.classList.remove('hidden');
     overlay.innerHTML = '';
 
-    const titleEl = document.createElement('div');
-    titleEl.className = 'hs-title';
-    overlay.appendChild(titleEl);
-
-    const playArea = document.createElement('div');
-    playArea.className = 'hs-play-area';
-    overlay.appendChild(playArea);
-
     // ひっさつわざのミニゲームも順番にローテーションする
     const game = HissatsuGames.list[GameState.hissatsuIndex % HissatsuGames.list.length];
     GameState.hissatsuIndex++;
 
-    game.start(
-        GameState.difficulty,
-        playArea,
-        (text) => { titleEl.innerText = text; },
-        (ratio) => {
-            overlay.classList.add('hidden');
-            overlay.innerHTML = '';
-            executeHissatsuDamage(ratio);
-        }
-    );
+    // ほかのミニゲームと同じように、先になにをするか説明してから始める
+    const announce = document.createElement('div');
+    announce.className = 'hs-announce';
+    const announceTitle = document.createElement('div');
+    announceTitle.className = 'hs-title';
+    announceTitle.innerText = game.getTitle();
+    const startBtn = document.createElement('button');
+    startBtn.className = 'btn-primary';
+    startBtn.innerHTML = '<ruby>スタート<rt>すたーと</rt></ruby>';
+    announce.appendChild(announceTitle);
+    announce.appendChild(startBtn);
+    overlay.appendChild(announce);
+
+    startBtn.onclick = () => {
+        overlay.innerHTML = '';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'hs-title';
+        overlay.appendChild(titleEl);
+
+        const playArea = document.createElement('div');
+        playArea.className = 'hs-play-area';
+        overlay.appendChild(playArea);
+
+        game.start(
+            GameState.difficulty,
+            playArea,
+            (text) => { titleEl.innerText = text; },
+            (ratio) => {
+                // クリアかどうかを、ほかのミニゲームの「すごい」と同じ見せ方で表示する
+                const info = hissatsuResultInfo(ratio);
+                Minigames.showResultText(playArea, info.text, info.color);
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    overlay.innerHTML = '';
+                    executeHissatsuDamage(ratio);
+                }, 1400);
+            }
+        );
+    };
 }
 
 async function executeHissatsuDamage(successRatio) {
-    // ダメージ計算（成功度 0〜1 から倍率を決める）
-    let multiplier = 0;
-    if(successRatio >= 0.999) multiplier = 6;      // ぜんぶ成功
-    else if(successRatio >= 0.7) multiplier = 4;
-    else if(successRatio >= 0.4) multiplier = 2.5;
-    else if(successRatio > 0) multiplier = 1.5;
-
-    // 先にクリアできたかどうかを表示してから、ダメージ演出に入る
-    const resultText = multiplier >= 6 ? 'だいせいこう' :
-        multiplier >= 4 ? 'せいこう' :
-        multiplier >= 2.5 ? 'せいこう' :
-        multiplier > 0 ? 'ぎりぎり せいこう' : 'しっぱい…';
-    document.getElementById('battle-log').innerText = resultText;
-    await sleep(700);
+    // ダメージ計算（成功度 0〜1 から倍率を決める。結果表示はミニゲーム側で表示済み）
+    const multiplier = hissatsuResultInfo(successRatio).multiplier;
 
     document.getElementById('battle-log').innerText = 'ひっさつわざ！';
 
